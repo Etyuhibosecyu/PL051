@@ -1,0 +1,55 @@
+﻿// Copyright (c) 2014 AlphaSierraPapa for the SharpDevelop Team
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this
+// software and associated documentation files (the "Software"), to deal in the Software
+// without restriction, including without limitation the rights to use, copy, modify, merge,
+// publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
+// to whom the Software is furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all copies or
+// substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+// INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+// PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+// FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+
+using ITextSource = AvaloniaEdit.Document.ITextSource;
+
+namespace AvaloniaEdit.Search;
+
+internal class RegexSearchStrategy(Regex searchPattern, bool matchWholeWords) : ISearchStrategy
+{
+	private readonly Regex _searchPattern = searchPattern ?? throw new ArgumentNullException(nameof(searchPattern));
+
+	public IEnumerable<ISearchResult> FindAll(ITextSource document, int offset, int length)
+	{
+		var endOffset = offset + length;
+		foreach (Match result in _searchPattern.Matches(document.Text)) {
+			var resultEndOffset = result.Length + result.Index;
+			if (offset > result.Index || endOffset < resultEndOffset)
+				continue;
+			if (matchWholeWords && (!IsWordBorder(document, result.Index) || !IsWordBorder(document, resultEndOffset)))
+				continue;
+			yield return new SearchResult { StartOffset = result.Index, Length = result.Length, Data = result };
+		}
+	}
+
+	private static bool IsWordBorder(ITextSource document, int offset) => TextUtilities.GetNextCaretPosition(document, offset - 1, LogicalDirection.Forward, CaretPositioningMode.WordBorder) == offset;
+
+	public ISearchResult FindNext(ITextSource document, int offset, int length) => FindAll(document, offset, length).FirstOrDefault();
+
+	public bool Equals(ISearchStrategy other) => other is RegexSearchStrategy strategy &&
+			strategy._searchPattern.ToString() == _searchPattern.ToString() &&
+			strategy._searchPattern.Options == _searchPattern.Options &&
+			strategy._searchPattern.RightToLeft == _searchPattern.RightToLeft;
+}
+
+internal class SearchResult : TextSegment, ISearchResult
+{
+	public Match Data { get; set; }
+
+	public string ReplaceWith(string replacement) => Data.Result(replacement);
+}

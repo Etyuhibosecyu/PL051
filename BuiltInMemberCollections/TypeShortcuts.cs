@@ -1,0 +1,188 @@
+﻿using NStar.Mpir;
+
+namespace PL051.NStar;
+
+public record struct UserDefinedType(ExtendedRestrictions Restrictions, TypeAttributes Attributes, NStarType BaseType, BranchCollection Decomposition);
+public record struct TempType(String Name, TypeAttributes Attributes, NStarType BaseType, int StartPos, int EndPos);
+public record struct UserDefinedProperty(NStarType NStarType, PropertyAttributes Attributes, String DefaultValue);
+public record struct UserDefinedConstant(NStarType NStarType, ConstantAttributes Attributes, TreeBranch DefaultValue);
+public record struct ExtendedRestriction(bool Package, NStarType RestrictionType, String Name);
+public record struct MethodParameter(String Type, String Name, List<String> ExtraTypes, ParameterAttributes Attributes, String DefaultValue);
+public record struct ExtendedMethodParameter(NStarType Type, String Name, ParameterAttributes Attributes, String DefaultValue);
+public record struct FunctionOverload(List<String> ExtraTypes, String ReturnType, List<String> ReturnExtraTypes, FunctionAttributes Attributes, MethodParameters Parameters);
+public record struct ExtendedMethodOverload(ExtendedRestrictions Restrictions, NStarType ReturnNStarType, FunctionAttributes Attributes, ExtendedMethodParameters Parameters);
+public record struct UserDefinedMethodOverload(String RealName, ExtendedRestrictions Restrictions, NStarType ReturnNStarType, FunctionAttributes Attributes, ExtendedMethodParameters Parameters, TreeBranch? Location)
+{
+	public readonly bool Equals(UserDefinedMethodOverload overload) =>
+		RealName.Equals(overload.RealName)
+		&& Restrictions.Length == overload.Restrictions.Length
+		&& Restrictions.Combine(overload.Restrictions).All(x => x.Item1.Equals(x.Item2))
+		&& ReturnNStarType.Equals(overload.ReturnNStarType) && Attributes == overload.Attributes
+		&& Restrictions.Length == overload.Restrictions.Length
+		&& Parameters.Length == overload.Parameters.Length
+		&& Parameters.Combine(overload.Parameters).All(x => x.Item1.Equals(x.Item2));
+	public override readonly int GetHashCode() => HashCode.Combine(RealName, Restrictions, ReturnNStarType, Attributes, Parameters);
+}
+
+public record struct ConstructorOverload(ConstructorAttributes Attributes, ExtendedMethodParameters Parameters, ListHashSet<int> UnsetRequiredProperties, TreeBranch? Location);
+
+public class TypeSortedList<T> : SortedDictionary<BlockStack, T>
+{
+	public TypeSortedList() : base(new BlockStackComparer())
+	{
+	}
+}
+public class TypeDictionary<T> : Dictionary<BlockStack, T>
+{
+	public TypeDictionary() : base(new BlockStackEComparer())
+	{
+	}
+}
+public class TypeDictionary2<T> : Dictionary<BlockStack, IList<T>>
+{
+	public TypeDictionary2() : base(new BlockStackEComparer())
+	{
+	}
+}
+public class LexemGroup : List<(BlockStack Container, String Name, int Start, int End)>
+{
+}
+public class BlocksToJump : List<(BlockStack Container, String Type, String Name, int Start, int End)>
+{
+}
+public class ExtendedTypesCollection(G.IComparer<(BlockStack Container, String Type)> comparer) : SortedDictionary<(BlockStack Container, String Type), (ExtendedRestrictions Restrictions, TypeAttributes Attributes)>(comparer)
+{
+}
+public class TypeVariables : SortedDictionary<String, NStarType>
+{
+	public TypeVariables() : base()
+	{
+	}
+
+	public TypeVariables(G.IDictionary<String, NStarType> dictionary) : base(dictionary)
+	{
+	}
+}
+public class TypeProperties : SortedDictionary<String, (NStarType NStarType, PropertyAttributes Attributes)>
+{
+}
+public class UserDefinedTypeProperties : Dictionary<String, UserDefinedProperty>
+{
+}
+public class TypeIndexers : SortedDictionary<String, (BlockStack IndexType, BlockStack Type, List<String> ExtraTypes, PropertyAttributes Attributes)>
+{
+}
+public class MethodParameters : List<MethodParameter>
+{
+	public MethodParameters() : base() { }
+	public MethodParameters(G.IEnumerable<MethodParameter> parameters) : base(parameters) { }
+}
+public class FunctionsList : SortedDictionary<String, FunctionOverload>
+{
+}
+public class ExtendedRestrictions : ListHashSet<ExtendedRestriction>
+{
+	public ExtendedRestrictions() : base(new ExtendedRestrictionEComparer()) { }
+}
+public class ExtendedMethodParameters : List<ExtendedMethodParameter>
+{
+	public ExtendedMethodParameters() : base()
+	{
+	}
+
+	public ExtendedMethodParameters(G.IEnumerable<ExtendedMethodParameter> collection) : base(collection)
+	{
+	}
+}
+public class ExtendedMethodOverloads : List<ExtendedMethodOverload>
+{
+}
+public class ExtendedMethods : SortedDictionary<String, ExtendedMethodOverloads>
+{
+}
+public class UserDefinedMethodOverloads : List<UserDefinedMethodOverload>
+{
+}
+public class UserDefinedMethods : Dictionary<String, UserDefinedMethodOverloads>
+{
+}
+public class ConstructorOverloads : List<ConstructorOverload>
+{
+	public ConstructorOverloads() : base() { }
+	public ConstructorOverloads(G.IEnumerable<ConstructorOverload> collection) : base(collection) { }
+}
+public class UnaryOperatorOverloads : List<(bool Postfix, NStarType ReturnNStarType, NStarType OpdNStarType)>
+{
+}
+public class UnaryOperatorClasses(G.IComparer<BlockStack> comparer) : SortedDictionary<BlockStack, UnaryOperatorOverloads>(comparer)
+{
+}
+public class BinaryOperatorOverloads : List<(NStarType ReturnNStarType, NStarType LeftOpdNStarType, NStarType RightOpdNStarType)>
+{
+}
+public class BinaryOperatorClasses(G.IComparer<BlockStack> comparer) : SortedDictionary<BlockStack, BinaryOperatorOverloads>(comparer)
+{
+}
+public class DestTypes : List<(NStarType DestType, bool Warning)>
+{
+}
+public class ImplicitConversions : Dictionary<BranchCollection, DestTypes>
+{
+	public ImplicitConversions() : base(new BranchCollectionEComparer())
+	{
+	}
+}
+public class OutdatedMethodOverloads : List<(ExtendedMethodParameters Parameters, String UseInstead)>
+{
+}
+public class OutdatedMethods : SortedDictionary<String, OutdatedMethodOverloads>
+{
+}
+
+public interface IClass { }
+
+public interface IImitator
+{
+	public MpzT Equivalent { get; }
+}
+
+public class TZeroImitator : IImitator
+{
+	public MpzT Equivalent { get; } = 0;
+}
+
+public class TOneImitator : IImitator
+{
+	public MpzT Equivalent { get; } = 1;
+}
+
+public class TNextImitator<T> : IImitator where T : IImitator, new()
+{
+	private static readonly T _underlying = new();
+	public MpzT Equivalent { get; } = _underlying.Equivalent + 1;
+}
+
+public class TDoubleImitator<T> : IImitator where T : IImitator, new()
+{
+	private static readonly T _underlying = new();
+	public MpzT Equivalent { get; } = _underlying.Equivalent << 1;
+}
+
+public class THexImitator<T> : IImitator where T : IImitator, new()
+{
+	private static readonly T _underlying = new();
+	public MpzT Equivalent { get; } = _underlying.Equivalent << 4;
+}
+
+public class TByteImitator<T> : IImitator where T : IImitator, new()
+{
+	private static readonly T _underlying = new();
+	public MpzT Equivalent { get; } = _underlying.Equivalent << 8;
+}
+
+public readonly struct ExtendedRestrictionEComparer : G.IEqualityComparer<ExtendedRestriction>
+{
+	public readonly bool Equals(ExtendedRestriction x, ExtendedRestriction y) => x.Name == y.Name;
+
+	public readonly int GetHashCode(ExtendedRestriction obj) => obj.Name.GetHashCode();
+}

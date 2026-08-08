@@ -1,0 +1,246 @@
+﻿using Newtonsoft.Json;
+using NStar.Core;
+using NStar.Mpir;
+using System;
+using System.Collections;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using static System.Math;
+using static PL051.NStar.TypeConverters;
+using Complex = RedStarMath.Complex;
+using String = NStar.Core.String;
+
+namespace PL051.NStar;
+
+public static class JsonConverters
+{
+	public static JsonSerializerSettings SerializerSettings { get; } = new()
+	{
+		Converters = [new StringConverter(), new EnumerableConverter(), new TypeConverter(), new TupleConverter(),
+			new NStarEntityConverter(), new ComplexConverter(), new MpuTConverter(), new MpzTConverter(),
+			new DoubleConverter(), new CharConverter(), new ValueTypeConverter(), new ClassConverter()]
+	};
+
+	public class CharConverter : JsonConverter<char>
+	{
+		public override char ReadJson(JsonReader reader, Type objectType, char existingValue,
+			bool hasExistingValue, JsonSerializer serializer) => throw new NotImplementedException();
+		public override void WriteJson(JsonWriter writer, char value, JsonSerializer serializer) =>
+			writer.WriteRaw("'" + value + "'");
+	}
+
+	public class ClassConverter : JsonConverter<IClass>
+	{
+		public override IClass? ReadJson(JsonReader reader, Type objectType, IClass? existingValue,
+			bool hasExistingValue, JsonSerializer serializer) => throw new NotSupportedException();
+		public override void WriteJson(JsonWriter writer, IClass? value, JsonSerializer serializer)
+		{
+			if (value is null)
+			{
+				writer.WriteNull();
+				return;
+			}
+			var netType = value.GetType();
+			writer.WriteRaw("new " + ((String)netType.Name).GetBefore('`') + "(");
+			List<Type> types = [];
+			for (var baseType = netType; baseType is not null; baseType = baseType.BaseType)
+				types.Add(baseType);
+			ListHashSet<PropertyInfo> hs = new(new EComparer<PropertyInfo>((x, y) => x.Name == y.Name,
+				x => x.Name.GetHashCode()));
+			foreach (var x in types.Reverse())
+				hs.AddRange(x.GetProperties());
+			var en = hs.GetEnumerator();
+			if (!en.MoveNext())
+			{
+				writer.WriteRaw(")");
+				return;
+			}
+			writer.WriteRaw(JsonConvert.SerializeObject(en.Current.GetValue(value), SerializerSettings));
+			while (en.MoveNext())
+				writer.WriteRaw(", " + JsonConvert.SerializeObject(en.Current.GetValue(value), SerializerSettings));
+			writer.WriteRaw(")");
+		}
+	}
+
+	public class ComplexConverter : JsonConverter<Complex>
+	{
+		public override Complex ReadJson(JsonReader reader, Type objectType, Complex existingValue,
+			bool hasExistingValue, JsonSerializer serializer) => throw new NotImplementedException();
+		public override void WriteJson(JsonWriter writer, Complex value, JsonSerializer serializer)
+		{
+			writer.WriteRaw(JsonConvert.SerializeObject(value.Real, SerializerSettings));
+			if (value.Imaginary is 0d / 0 or >= 0)
+				writer.WriteRaw("+");
+			writer.WriteRaw(JsonConvert.SerializeObject(value.Imaginary, SerializerSettings));
+			writer.WriteRaw("i");
+		}
+	}
+
+	public class DoubleConverter : JsonConverter<double>
+	{
+		public override double ReadJson(JsonReader reader, Type objectType, double existingValue,
+			bool hasExistingValue, JsonSerializer serializer) => throw new NotImplementedException();
+		public override void WriteJson(JsonWriter writer, double value, JsonSerializer serializer)
+		{
+			if (value is 1d / 0)
+			{
+				writer.WriteRaw("Infty");
+				return;
+			}
+			if (value is -1d / 0)
+			{
+				writer.WriteRaw("-Infty");
+				return;
+			}
+			if (value is 0d / 0)
+			{
+				writer.WriteRaw("Uncty");
+				return;
+			}
+			if (value is -0d)
+			{
+				writer.WriteRaw("0");
+				return;
+			}
+			var truncated = unchecked((long)Truncate(value));
+			if (truncated == value)
+				writer.WriteValue(truncated);
+			else
+				writer.WriteValue(value);
+		}
+	}
+
+	public class EnumerableConverter : JsonConverter<IEnumerable>
+	{
+		public override IEnumerable? ReadJson(JsonReader reader, Type objectType, IEnumerable? existingValue,
+			bool hasExistingValue, JsonSerializer serializer) => throw new NotSupportedException();
+
+		public override void WriteJson(JsonWriter writer, IEnumerable? value, JsonSerializer serializer)
+		{
+			if (value is null)
+			{
+				writer.WriteNull();
+				return;
+			}
+			var en = value.GetEnumerator();
+			if (!en.MoveNext())
+			{
+				writer.WriteRaw("()");
+				return;
+			}
+			writer.WriteRaw("(" + JsonConvert.SerializeObject(en.Current, SerializerSettings));
+			while (en.MoveNext())
+				writer.WriteRaw(", " + JsonConvert.SerializeObject(en.Current, SerializerSettings));
+			writer.WriteRaw(")");
+		}
+	}
+
+	public class MpuTConverter : JsonConverter<MpuT>
+	{
+		public override MpuT ReadJson(JsonReader reader, Type objectType, MpuT? existingValue,
+			bool hasExistingValue, JsonSerializer serializer) => throw new NotImplementedException();
+		public override void WriteJson(JsonWriter writer, MpuT? value, JsonSerializer serializer) =>
+			writer.WriteRaw(value?.ToString());
+	}
+
+	public class MpzTConverter : JsonConverter<MpzT>
+	{
+		public override MpzT ReadJson(JsonReader reader, Type objectType, MpzT? existingValue,
+			bool hasExistingValue, JsonSerializer serializer) => throw new NotImplementedException();
+		public override void WriteJson(JsonWriter writer, MpzT? value, JsonSerializer serializer) =>
+			writer.WriteRaw(value?.ToString());
+	}
+
+	public class StringConverter : JsonConverter<String>
+	{
+		public override String? ReadJson(JsonReader reader, Type objectType, String? existingValue,
+			bool hasExistingValue, JsonSerializer serializer) => throw new NotSupportedException();
+
+		public override void WriteJson(JsonWriter writer, String? value, JsonSerializer serializer)
+		{
+			if (value is null)
+			{
+				writer.WriteNull();
+				return;
+			}
+			if (value.GetAfter('\"').Contains(item: '\"') && value.TryTakeIntoRawQuotes(out var rawString))
+				writer.WriteRaw(rawString.ToString());
+			else if (!value.GetAfter('\\').Contains(item: '\\'))
+				writer.WriteRaw(value.TakeIntoQuotes().ToString());
+			else
+				writer.WriteRaw(value.TakeIntoVerbatimQuotes().ToString());
+		}
+	}
+
+	public class TupleConverter : JsonConverter<ITuple>
+	{
+		public override ITuple? ReadJson(JsonReader reader, Type objectType, ITuple? existingValue,
+			bool hasExistingValue, JsonSerializer serializer) => throw new NotSupportedException();
+
+		public override void WriteJson(JsonWriter writer, ITuple? value, JsonSerializer serializer)
+		{
+			if (value is null)
+			{
+				writer.WriteNull();
+				return;
+			}
+			var outputArray = new string[value.Length];
+			for (var i = 0; i < outputArray.Length; i++)
+				outputArray[i] = JsonConvert.SerializeObject(value[i], SerializerSettings);
+			writer.WriteRaw("(" + string.Join(", ", outputArray) + ")");
+		}
+	}
+
+	public class TypeConverter : JsonConverter<Type>
+	{
+		public override Type ReadJson(JsonReader reader, Type objectType, Type? existingValue,
+			bool hasExistingValue, JsonSerializer serializer) => throw new NotSupportedException();
+		public override void WriteJson(JsonWriter writer, Type? value, JsonSerializer serializer)
+		{
+			if (value is null)
+			{
+				writer.WriteNull();
+				return;
+			}
+			writer.WriteRaw(TypeMappingBack(value, [], []).ToString());
+		}
+	}
+
+	public class NStarEntityConverter : JsonConverter<NStarEntity>
+	{
+		public override NStarEntity ReadJson(JsonReader reader, Type objectType, NStarEntity existingValue,
+			bool hasExistingValue, JsonSerializer serializer) => throw new NotSupportedException();
+		public override void WriteJson(JsonWriter writer, NStarEntity value, JsonSerializer serializer) =>
+			writer.WriteRaw(value.ToString(true).ToString());
+	}
+
+	public class ValueTypeConverter : JsonConverter<ValueType>
+	{
+		public override ValueType? ReadJson(JsonReader reader, Type objectType, ValueType? existingValue,
+			bool hasExistingValue, JsonSerializer serializer) => throw new NotSupportedException();
+
+		public override void WriteJson(JsonWriter writer, ValueType? value, JsonSerializer serializer)
+		{
+			if (value is null)
+			{
+				writer.WriteNull();
+				return;
+			}
+			var type = value.GetType();
+			var fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+			var outputArray = new string[fields.Length];
+			for (var i = 0; i < fields.Length; i++)
+			{
+				var x = fields[i];
+				if (x.DeclaringType == typeof(bool))
+					outputArray[i] = value.ToString()!.ToLowerInvariant();
+				else if (x.FieldType == type)
+					outputArray[i] = value.ToString()!;
+				else
+					outputArray[i] = JsonConvert.SerializeObject(x.GetValue(value), SerializerSettings);
+			}
+			var joined = string.Join(", ", outputArray);
+			writer.WriteRaw(fields.Length == 1 ? joined : "(" + joined + ")");
+		}
+	}
+}

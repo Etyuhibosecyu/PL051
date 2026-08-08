@@ -1,0 +1,185 @@
+﻿using System.Collections.Immutable;
+
+namespace PL051.NStar;
+
+public readonly record struct NStarType(BlockStack MainType, BranchCollection ExtraTypes)
+{
+	public static readonly BranchCollection NoBranches = [];
+	public const string DefaultConst = "default", DefaultNull = "default!";
+	public const string SystemName = "System", CollectionsName = "Collections", UnsafeName = "Unsafe";
+	public const string NullString = "null", ObjectTypeName = "object", BoolTypeName = "bool", ByteTypeName = "byte";
+	public const string ShortIntTypeName = "short int", UnsignedShortIntTypeName = "unsigned short int";
+	public const string CharTypeName = "char", IntTypeName = "int", UnsignedIntTypeName = "unsigned int";
+	public const string LongIntTypeName = "long int", UnsignedLongIntTypeName = "unsigned long int";
+	public const string LongLongTypeName = "long long", UnsignedLongLongTypeName = "unsigned long long";
+	public const string ShortCharTypeName = "short char", LongCharTypeName = "long char";
+	public const string RealTypeName = "real", DecimalTypeName = "decimal";
+	public const string LongRealTypeName = "long real", LongDecimalTypeName = "long decimal";
+	public const string ComplexTypeName = "complex", DeccomplexTypeName = "deccomplex";
+	public const string LongComplexTypeName = "long complex", LongDeccomplexTypeName = "long deccomplex";
+	public const string RecursiveTypeName = "typename", StringTypeName = "string";
+	public const string TupleName = "tuple";
+	public static readonly NStarType NullType = GetPrimitiveType(NullString);
+	public static readonly NStarType ObjectType = GetPrimitiveType(ObjectTypeName);
+	public static readonly NStarType BoolType = GetPrimitiveType(BoolTypeName);
+	public static readonly NStarType ByteType = GetPrimitiveType(ByteTypeName);
+	public static readonly NStarType ShortIntType = GetPrimitiveType(ShortIntTypeName);
+	public static readonly NStarType UnsignedShortIntType = GetPrimitiveType(UnsignedShortIntTypeName);
+	public static readonly NStarType CharType = GetPrimitiveType(CharTypeName);
+	public static readonly NStarType IntType = GetPrimitiveType(IntTypeName);
+	public static readonly NStarType UnsignedIntType = GetPrimitiveType(UnsignedIntTypeName);
+	public static readonly NStarType LongIntType = GetPrimitiveType(LongIntTypeName);
+	public static readonly NStarType DateTimeType = GetPrimitiveType(nameof(DateTime));
+	public static readonly NStarType TimeSpanType = GetPrimitiveType(nameof(TimeSpan));
+	public static readonly NStarType UnsignedLongIntType = GetPrimitiveType(UnsignedLongIntTypeName);
+	public static readonly NStarType RealType = GetPrimitiveType(RealTypeName);
+	public static readonly NStarType DecimalType = GetPrimitiveType(DecimalTypeName);
+	public static readonly NStarType LongLongType = GetPrimitiveType(LongLongTypeName);
+	public static readonly NStarType UnsignedLongLongType = GetPrimitiveType(UnsignedLongLongTypeName);
+	public static readonly NStarType ComplexType = GetPrimitiveType(ComplexTypeName);
+	public static readonly NStarType RecursiveType = GetPrimitiveType(RecursiveTypeName);
+	public static readonly NStarType StringType = GetPrimitiveType(StringTypeName);
+	public static readonly NStarType IndexType = GetPrimitiveType("index");
+	public static readonly NStarType RangeType = GetPrimitiveType("range");
+	public static readonly NStarType ExceptionType = new(new(new(BlockType.Namespace, SystemName, 1),
+		new(BlockType.Class, nameof(Exception), 1)), NoBranches);
+	public static readonly NStarType ChainType = new(new(new(BlockType.Namespace, SystemName, 1),
+		new(BlockType.Namespace, CollectionsName, 1), new(BlockType.Struct, nameof(Chain), 1)), NoBranches);
+	public static readonly NStarType UnsafeStringType = new(new(new(BlockType.Namespace, SystemName, 1),
+		new(BlockType.Namespace, UnsafeName, 1), new(BlockType.Class, "UnsafeString", 1)), NoBranches);
+	public static readonly NStarType BitListType = GetListType(BoolType);
+	public static readonly NStarType WrongVarType = new(new(new Block(BlockType.Other, "wrong var", 1)), NoBranches);
+	public static readonly BlockStack EmptyBlockStack = new();
+	public static readonly BlockStack ListBlockStack = new(new Block(BlockType.Primitive, "list", 1));
+	public static readonly BlockStack TupleBlockStack = new(new Block(BlockType.Primitive, TupleName, 1));
+	public static readonly BlockStack EventHandlerBlockStack = new(new(BlockType.Namespace, SystemName, 1),
+		new(BlockType.Delegate, "EventHandler", 1));
+	public static readonly BlockStack FuncBlockStack = new(new(BlockType.Namespace, SystemName, 1),
+		new(BlockType.Delegate, nameof(Func<>), 1));
+	public static readonly BlockStack RecursiveBlockStack = GetPrimitiveBlockStack(RecursiveTypeName);
+	public static readonly BlockStack IEnumerableBlockStack = new(new(BlockType.Namespace, SystemName, 1),
+		new(BlockType.Namespace, CollectionsName, 1), new(BlockType.Interface, nameof(G.IEnumerable<>), 1));
+	public static readonly BlockStack BaseIndexableBlockStack = new(new(BlockType.Namespace, SystemName, 1),
+		new(BlockType.Namespace, CollectionsName, 1), new(BlockType.Class, nameof(BaseIndexable<>), 1));
+	public static readonly BlockStack DictionaryBlockStack = new(new(BlockType.Namespace, SystemName, 1),
+		new(BlockType.Namespace, CollectionsName, 1), new(BlockType.Class, nameof(Dictionary<,>), 1));
+	public static readonly BlockStack FuncDictionaryBlockStack = new(new(BlockType.Namespace, SystemName, 1),
+		new(BlockType.Namespace, UnsafeName, 1), new(BlockType.Class, nameof(FuncDictionary<,>), 1));
+	public static readonly BlockStack ListHashSetBlockStack = new(new(BlockType.Namespace, SystemName, 1),
+		new(BlockType.Namespace, CollectionsName, 1), new(BlockType.Class, nameof(ListHashSet<>), 1));
+	public static readonly BlockStack TaskBlockStack = new(new(BlockType.Namespace, SystemName, 1),
+		new(BlockType.Namespace, "Threading", 1), new(BlockType.Class, "Task", 1));
+	public static readonly BlockStack ValueTaskBlockStack = new(new(BlockType.Namespace, SystemName, 1),
+		new(BlockType.Namespace, "Threading", 1), new(BlockType.Struct, "ValueTask", 1));
+	public static readonly BlockStack EmptyTaskBlockStack = new(new(BlockType.Namespace, SystemName, 1),
+		new(BlockType.Namespace, UnsafeName, 1), new(BlockType.Class, "EmptyTask", 1));
+	public static readonly BlockStack ValueEmptyTaskBlockStack = new(new(BlockType.Namespace, SystemName, 1),
+		new(BlockType.Namespace, UnsafeName, 1), new(BlockType.Struct, "ValueEmptyTask", 1));
+	public static readonly ImmutableArray<BlockStack> TaskBlockStacks = [
+		TaskBlockStack, ValueTaskBlockStack, EmptyTaskBlockStack, ValueEmptyTaskBlockStack
+	];
+
+	public NStarType Copy() => new(new(MainType), new(ExtraTypes.Values.Convert(x =>
+		new TreeBranch(x.Name.Copy(), x.Pos, x.Container)
+		{
+			Elements = x.Elements.Copy(),
+			Extra = x.Extra is NStarType NStarType ? NStarType.Copy() : x
+		})));
+
+	public static NStarType GetListType(NStarType InnerType)
+	{
+		if (!TypeEqualsToPrimitive(InnerType, "list", false))
+			return new(ListBlockStack, new([new("type", 0, []) { Extra = InnerType }]));
+		else if (InnerType.ExtraTypes.Length >= 2 && InnerType.ExtraTypes[0].Name != "type"
+			&& int.TryParse(InnerType.ExtraTypes[0].Name.ToString(), out var number))
+			return new(ListBlockStack, new([new((number + 1).ToString(), 0, []), InnerType.ExtraTypes[^1]]));
+		else
+			return new(ListBlockStack, new([new("2", 0, []), InnerType.ExtraTypes[^1]]));
+	}
+
+	public static NStarType GetListType(TreeBranch InnerType)
+	{
+		if (InnerType.Name != "type" || InnerType.Extra is not NStarType NStarType
+			|| !TypeEqualsToPrimitive(NStarType, "list", false))
+			return new(ListBlockStack, new([InnerType]));
+		else if (NStarType.ExtraTypes.Length >= 2 && NStarType.ExtraTypes[0].Name != "type"
+			&& int.TryParse(NStarType.ExtraTypes[0].Name.ToString(), out var number))
+			return new(ListBlockStack, new([new((number + 1).ToString(), 0, []), NStarType.ExtraTypes[^1]]));
+		else
+			return new(ListBlockStack, new([new("2", 0, []), NStarType.ExtraTypes[^1]]));
+	}
+
+	public static BlockStack GetPrimitiveBlockStack(String primitive) => new(new Block(BlockType.Primitive, primitive, 1));
+
+	public static NStarType GetPrimitiveType(String primitive) =>
+		(new(new Block(BlockType.Primitive, primitive, 1)), NoBranches);
+
+	public static (BlockStack Container, String Type) SplitType(BlockStack blockStack) =>
+		(new(blockStack.ToList().SkipLast(1)), blockStack.TryPeek(out var block) ? block.Name : []);
+
+	public static (BlockStack Container, String Type) SplitType(Stack<Block> blockStack) =>
+		(new(blockStack.ToList().SkipLast(1)), blockStack.TryPeek(out var block) ? block.Name : []);
+
+	public override readonly string ToString()
+	{
+		if (TypeEqualsToPrimitive(this, "list", false))
+			return "list(" + (ExtraTypes.Length == 2 ? ExtraTypes[0].ToShortString() : "") + ") "
+				+ ExtraTypes[^1].ToShortString();
+		else if (TypeEqualsToPrimitive(this, TupleName, false))
+		{
+			if (ExtraTypes.Length == 0 || ExtraTypes[0].Name != "type" || ExtraTypes[0].Extra is not NStarType prev)
+				return "()";
+			if (ExtraTypes.Length == 1)
+				return prev.ToString();
+			String result = [];
+			var repeats = 1;
+			for (var i = 1; i < ExtraTypes.Length; i++)
+			{
+				if (ExtraTypes[i].Name != "type" || ExtraTypes[i].Extra is not NStarType current)
+					return "()";
+				if (prev.Equals(current))
+				{
+					repeats++;
+					continue;
+				}
+				if (result.Length == 0)
+					result.Add('(');
+				else
+					result.AddRange(", ");
+				var isList = TypeEqualsToPrimitive(prev, "list", false);
+				if (isList)
+					result.Add('(');
+				result.AddRange(prev.ToString());
+				if (isList)
+					result.Add(')');
+				if (repeats != 1)
+					result.Add('[').AddRange(repeats.ToString()).Add(']');
+				repeats = 1;
+				prev = current;
+			}
+			var containsMultiple = result.Length != 0;
+			if (containsMultiple)
+				result.AddRange(", ");
+			result.AddRange(prev.ToString());
+			if (repeats != 1)
+				result.Add('[').AddRange(repeats.ToString()).Add(']');
+			if (containsMultiple)
+				result.Add(')');
+			return result.ToString();
+		}
+		else
+			return MainType.ToString() + (ExtraTypes.Length == 0 ? "" : "[" + ExtraTypes.ToString() + "]");
+	}
+
+	public static bool TypeEqualsToPrimitive(NStarType type, string primitive, bool noExtra = true) =>
+		TypeEqualsToPrimitive(type, String.ReturnOrConstruct(primitive), noExtra);
+
+	public static bool TypeEqualsToPrimitive(NStarType type, String primitive, bool noExtra = true) =>
+		TypeIsPrimitive(type.MainType) && type.MainType.Peek().Name == primitive && (!noExtra || type.ExtraTypes.Length == 0);
+
+	public static bool TypeIsPrimitive(BlockStack type) => type.Length == 1
+		&& type.Peek().BlockType == BlockType.Primitive;
+
+	public static implicit operator NStarType((BlockStack MainType, BranchCollection ExtraTypes) value) =>
+		new(value.MainType, value.ExtraTypes);
+}

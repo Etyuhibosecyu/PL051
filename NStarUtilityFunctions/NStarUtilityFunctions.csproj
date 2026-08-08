@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\TypeConverters\TypeConverters.csproj" />
+		<Reference Include="RedStarMath">
+			<HintPath>..\BuiltInMemberCollections\packages\RedStarMath.dll</HintPath>
+		</Reference>
+		<Reference Include="RedStarMath.Complex">
+			<HintPath>..\BuiltInMemberCollections\packages\RedStarMath.Complex.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+</Project>
