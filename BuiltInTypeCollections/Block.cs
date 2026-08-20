@@ -58,7 +58,7 @@ public readonly struct BlockStack : IReadOnlyCollection<Block>
 			return false;
 		for (var i = 0; i < Length && i < m.Length; i++)
 		{
-			if (!this.ElementAt(i).Equals(m.ElementAt(i)))
+			if (!_items[i].Equals(m.ElementAt(i)))
 				return false;
 		}
 		return true;

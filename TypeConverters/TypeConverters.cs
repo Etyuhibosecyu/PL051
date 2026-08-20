@@ -66,6 +66,11 @@ public static class TypeConverters
 					return GetListSubtype(type);
 				else if (block.Name == "range")
 					return IntType;
+				else if (block.Name == TupleName
+					&& (type.ExtraTypes.AllEqual() || type.ExtraTypes.Length == 2
+					&& type.ExtraTypes[1].Length == 0 && int.TryParse(type.ExtraTypes[1].Name.AsSpan(), out _))
+					&& type.ExtraTypes[0].Extra is NStarType Subtype)
+					return Subtype;
 				else
 					return NullType;
 			}
@@ -328,7 +333,7 @@ public static class TypeConverters
 			&& destinationType.ExtraTypes[0].Extra is NStarType DestinationSubtype)
 			destinationType = DestinationSubtype;
 		if (IsEqualOrDerived(sourceType, destinationType) && (sourceType.ExtraTypes, destinationType.ExtraTypes).Combine()
-			.All(x => x.Item1.Value.Equals(x.Item2.Value)))
+			.All(x => x.Item1.Equals(x.Item2)))
 		{
 			destExpr = srcExpr;
 			return true;
@@ -367,16 +372,38 @@ public static class TypeConverters
 				destExpr = DefaultNull;
 				return false;
 			}
-			if (sourceType.ExtraTypes.Length != destinationType.ExtraTypes.Length)
+			if (sourceType.ExtraTypes.Length >= 2 && sourceType.ExtraTypes.AllEqual())
+			{
+				sourceType.ExtraTypes[1].Replace(new(sourceType.ExtraTypes.Length.ToString(),
+					sourceType.ExtraTypes[1].Pos, sourceType.ExtraTypes[1].Container));
+				sourceType.ExtraTypes.RemoveEnd(2);
+			}
+			if (destinationType.ExtraTypes.Length >= 2 && destinationType.ExtraTypes.AllEqual())
+			{
+				destinationType.ExtraTypes[1].Replace(new(destinationType.ExtraTypes.Length.ToString(),
+					destinationType.ExtraTypes[1].Pos, destinationType.ExtraTypes[1].Container));
+				destinationType.ExtraTypes.RemoveEnd(2);
+			}
+			if (sourceType.ExtraTypes.Length != destinationType.ExtraTypes.Length
+				&& sourceType.ExtraTypes.All(x => x.Name == "type") && destinationType.ExtraTypes.All(x => x.Name == "type"))
 			{
 				destExpr = DefaultNull;
 				return false;
 			}
 			destExpr = srcExpr;
-			return sourceType.ExtraTypes.Values.Combine(destinationType.ExtraTypes.Values).All(x =>
-			x.Item1.Name == "type" && x.Item1.Extra is NStarType LeftType
-			&& x.Item2.Name == "type" && x.Item2.Extra is NStarType RightType
-			&& TypesAreCompatible(LeftType, RightType, out var innerWarning, null, out _, out _) && !innerWarning);
+			return sourceType.ExtraTypes.Combine(destinationType.ExtraTypes)
+				.All(x => x.Item1.Name == "type" && x.Item1.Extra is NStarType LeftType
+				&& x.Item2.Name == "type" && x.Item2.Extra is NStarType RightType
+				&& TypesAreCompatible(LeftType, RightType, out var innerWarning, null, out _, out _) && !innerWarning
+				|| x.Item1.Length == 0 && int.TryParse(x.Item1.Name.AsSpan(), out var leftLength)
+				&& x.Item2.Length == 0 && int.TryParse(x.Item2.Name.AsSpan(), out var rightLength)
+				&& leftLength == rightLength)
+				|| destinationType.ExtraTypes.Length == 2
+				&& destinationType.ExtraTypes[0].Name == "type" && destinationType.ExtraTypes[0].Extra is NStarType RightType
+				&& destinationType.ExtraTypes[1].Length == 0
+				&& int.TryParse(destinationType.ExtraTypes[1].Name.AsSpan(), out var rightLength)
+				&& sourceType.ExtraTypes.All(x => x.Name == "type" && x.Extra is NStarType LeftType
+				&& TypesAreCompatible(LeftType, RightType, out var innerWarning, null, out _, out _) && !innerWarning);
 		}
 		var destinationTypeString = destinationType.MainType.ToString();
 		if (TypeEqualsToPrimitive(destinationType, "list", false) || destinationType.MainType.Length != 0
@@ -398,7 +425,7 @@ public static class TypeConverters
 						+ " if you need more, use the other ways like Chain() or Fill()";
 					return false;
 				}
-				else if (!sourceType.ExtraTypes.All(x => x.Value.Name == "type" && x.Value.Extra is NStarType ValueType
+				else if (!sourceType.ExtraTypes.All(x => x.Name == "type" && x.Extra is NStarType ValueType
 					&& TypesAreCompatible(ValueType, subtype, out var innerWarning, null, out _, out _) && !innerWarning))
 				{
 					destExpr = DefaultNull;
@@ -511,8 +538,8 @@ public static class TypeConverters
 				if (destinationType.ExtraTypes.Skip(1).Combine(sourceType.ExtraTypes.Skip(1), (x, y) =>
 				{
 					var warning3 = false;
-					var b = x.Value.Name == "type" && x.Value.Extra is NStarType LeftType
-					&& y.Value.Name == "type" && y.Value.Extra is NStarType RightType
+					var b = x.Name == "type" && x.Extra is NStarType LeftType
+					&& y.Name == "type" && y.Extra is NStarType RightType
 					&& TypesAreCompatible(LeftType, RightType, out warning3, null, out _, out _);
 					warning2 |= warning3;
 					return b;
@@ -538,9 +565,9 @@ public static class TypeConverters
 				if (srcExpr is null)
 					destExpr = null;
 				else if (DestinationDepth == 0)
-					destExpr = (String?)(((String)"(").AddRange(srcExpr).AddRange(").ToString()"));
+					destExpr = (String?)((String)"(").AddRange(srcExpr).AddRange(").ToString()");
 				else
-					destExpr = (String?)(srcExpr);
+					destExpr = (String?)srcExpr;
 				return true;
 			}
 			else if (SourceDepth <= DestinationDepth && TypesAreCompatible(SourceLeafType, DestinationLeafType,
@@ -780,7 +807,7 @@ public static class TypeConverters
 					&& NStarType.ExtraTypes[0].Extra is NStarType ValueInnerNStarType && ValueInnerNStarType.Equals(NullType)))
 					return typeof(ValueTask);
 				else if (netType.ContainsGenericParameters)
-					return netType.MakeGenericType(NStarType.ExtraTypes.ToArray(x => TypeMapping(x.Value)));
+					return netType.MakeGenericType(NStarType.ExtraTypes.ToArray(TypeMapping));
 				else
 					return netType;
 			}
@@ -788,7 +815,7 @@ public static class TypeConverters
 			{
 				netType = @interface.DotNetType;
 				if (netType.ContainsGenericParameters)
-					return netType.MakeGenericType(NStarType.ExtraTypes.ToArray(x => TypeMapping(x.Value)));
+					return netType.MakeGenericType(NStarType.ExtraTypes.ToArray(TypeMapping));
 				else
 					return netType;
 			}
@@ -814,6 +841,9 @@ public static class TypeConverters
 		if (NStarType.ExtraTypes.Length == 1)
 			return first;
 		var innerResult = first;
+		if (NStarType.ExtraTypes.Length == 2 && NStarType.ExtraTypes[1].Length == 0
+			&& int.TryParse(NStarType.ExtraTypes[1].Name.AsSpan(), out var tupleLength))
+			return ConstructTupleType(RedStarLinq.FillArray(innerResult, tupleLength).GetSlice());
 		for (var i = 1; i < NStarType.ExtraTypes.Length; i++)
 		{
 			if (NStarType.ExtraTypes[i].Name == "type" && NStarType.ExtraTypes[i].Extra is NStarType InnerNStarType2)
@@ -971,7 +1001,7 @@ public static class TypeConverters
 		{
 			if (CreateVar(PrimitiveTypes.Find(x => x.Value == netType).Key, out var typename) is not null)
 				return typename == "list" ? GetListType(TypeMappingBack(typeGenericArguments[0], genericArguments,
-					new(extraTypes.Values.TakeLast(genericArguments.Length))))
+					new(extraTypes.TakeLast(genericArguments.Length))))
 					: GetPrimitiveType(typename);
 			else if (netType == typeof(Task))
 				return new(TaskBlockStack, [new("type", 0, []) { Extra = NullType }]);
@@ -1035,13 +1065,14 @@ public static class TypeConverters
 			return pattern.TypeToInsert;
 		else
 		{
-			return new(originalType.MainType, [.. originalType.ExtraTypes.Convert(x =>
-				new G.KeyValuePair<String, TreeBranch>(x.Key, x.Value.Name != "type"
-				|| x.Value.Extra is not NStarType InnerNStarType ? new TreeBranch(x.Value.Name, x.Value.Pos, x.Value.Container)
-				: new TreeBranch("type", x.Value.Pos, x.Value.Container)
+			return new(originalType.MainType, new(originalType.ExtraTypes
+				.ToList((x, index) => new G.KeyValuePair<String?, TreeBranch>(originalType.ExtraTypes.Keys
+				.TryGetKey(index, out var key) ? key : null, x.Name != "type"
+				|| x.Extra is not NStarType InnerNStarType ? new TreeBranch(x.Name, x.Pos, x.Container)
+				: new TreeBranch("type", x.Pos, x.Container)
 				{
 					Extra = ReplaceExtraType(InnerNStarType, pattern)
-				}))]);
+				}))));
 		}
 	}
 

@@ -23,7 +23,7 @@ public class LexemStream
 	private protected readonly String input;
 	private protected List<String>? errors;
 	private readonly BlockStack? rootContainer;
-	private protected bool wreckOccurred;
+	private protected int errorOccurred, wreckOccurred;
 	private protected int pos;
 	private int prevPos;
 	private readonly Stack<Block> nestedBlocksChain = new();
@@ -41,19 +41,19 @@ public class LexemStream
 	private protected static readonly Mirror<char, char> BracketPairs = new() { { '(', ')' }, { '[', ']' }, { '{', '}' } };
 
 	private protected LexemStream(List<Lexem> lexems, String input, List<String>? errors,
-		bool wreckOccurred, BlockStack? rootContainer = null)
+		int errorOccurred, BlockStack? rootContainer = null)
 	{
 		this.lexems = lexems;
 		this.input = input;
 		this.errors = errors;
 		this.rootContainer = rootContainer;
-		this.wreckOccurred = wreckOccurred;
+		this.errorOccurred = errorOccurred;
 		pos = 0;
 		prevPos = 0;
 	}
 
 	private protected LexemStream(LexemStream lexemStream) : this(lexemStream.lexems, lexemStream.input,
-		lexemStream.errors, lexemStream.wreckOccurred, lexemStream.rootContainer)
+		lexemStream.errors, lexemStream.errorOccurred, lexemStream.rootContainer)
 	{
 		pos = lexemStream.pos;
 		blocksToJump = lexemStream.blocksToJump;
@@ -61,22 +61,22 @@ public class LexemStream
 		parameterLists = lexemStream.parameterLists;
 	}
 
-	public (List<Lexem> Lexems, String String, TreeBranch TopBranch, List<String>? ErrorsList, bool WreckOccurred) Parse()
+	public (List<Lexem> Lexems, String String, TreeBranch TopBranch, List<String>? ErrorsList, int errorOccurred) Parse()
 	{
 		PreParse();
-		return wreckOccurred ? EmptySyntaxTree() : new MainParsing(this, wreckOccurred).MainParse();
+		return errorOccurred == 2 ? EmptySyntaxTree() : new MainParsing(this, errorOccurred).MainParse();
 	}
 
 	private void PreParse()
 	{
 		try
 		{
-			if (wreckOccurred)
+			if (errorOccurred == 2)
 				return;
 			while (pos < lexems.Length)
 			{
 				PreParseIteration();
-				if (wreckOccurred)
+				if (errorOccurred == 2)
 					return;
 			}
 			if (figureBk != 0)
@@ -96,7 +96,7 @@ public class LexemStream
 					"The internal exception message was:", ex.Message,
 					"The underlying internal exception was:", ex.InnerException?.GetType().Name ?? NullString,
 					"The underlying internal exception message was:", ex.InnerException?.Message ?? NullString]);
-			wreckOccurred = true;
+			errorOccurred = 2;
 			return;
 		}
 	}
@@ -819,15 +819,17 @@ public class LexemStream
 	private void GenerateMessage(ushort code, Index pos, params dynamic[] parameters)
 	{
 		Messages.GenerateMessage(ref errors, code, lexems[pos].LineN, lexems[pos].Pos, parameters);
+		if (code >> 12 != 0x8 && errorOccurred == 0)
+			errorOccurred = 1;
 		if (code >> 12 == 0x9)
-			wreckOccurred = true;
+			errorOccurred = 2;
 	}
 
 	private void GenerateUnexpectedEndError() => Messages.GenerateMessage(ref errors, 0x0000,
 		lexems[pos - 1].LineN, lexems[pos - 1].Pos + lexems[pos - 1].String.Length);
 
 	public (List<Lexem> Lexems, String String, TreeBranch TopBranch, List<String>? ErrorsList,
-		bool WreckOccurred) EmptySyntaxTree() => (lexems, input, TreeBranch.DoNotAdd(), errors, true);
+		int errorOccurred) EmptySyntaxTree() => (lexems, input, TreeBranch.DoNotAdd(), errors, errorOccurred);
 
 	private bool IsClass() => nestedBlocksChain.Length != 0 && nestedBlocksChain.TryPeek(out var block)
 		&& (block.BlockType is BlockType.Class or BlockType.Struct || block.BlockType == BlockType.Unnamed
@@ -1029,11 +1031,11 @@ public class LexemStream
 		| TypeAttributes.Static | TypeAttributes.Struct | TypeAttributes.Enum
 		| TypeAttributes.Delegate)) is TypeAttributes.None or TypeAttributes.Abstract;
 
-	public static implicit operator LexemStream((List<Lexem> Lexems, String String, List<String> ErrorsList, bool WreckOccurred) x) => new(x.Lexems, x.String, x.ErrorsList, x.WreckOccurred);
+	public static implicit operator LexemStream((List<Lexem> Lexems, String String, List<String> ErrorsList, int ErrorOccurred) x) => new(x.Lexems, x.String, x.ErrorsList, x.ErrorOccurred);
 
-	public static implicit operator LexemStream(((List<Lexem> Lexems, String String, List<String> ErrorsList, bool WreckOccurred) Main, BlockStack? RootContainer) x) => new(x.Main.Lexems, x.Main.String, x.Main.ErrorsList, x.Main.WreckOccurred, x.RootContainer);
+	public static implicit operator LexemStream(((List<Lexem> Lexems, String String, List<String> ErrorsList, int ErrorOccurred) Main, BlockStack? RootContainer) x) => new(x.Main.Lexems, x.Main.String, x.Main.ErrorsList, x.Main.ErrorOccurred, x.RootContainer);
 
-	public static implicit operator LexemStream(CodeSample x) => ((List<Lexem> Lexems, String String, List<String> ErrorsList, bool WreckOccurred))x;
+	public static implicit operator LexemStream(CodeSample x) => ((List<Lexem> Lexems, String String, List<String> ErrorsList, int ErrorOccurred))x;
 
-	public static implicit operator (List<Lexem> Lexems, String String, TreeBranch TopBranch, List<String>? ErrorsList, bool WreckOccurred)(LexemStream x) => x.Parse();
+	public static implicit operator (List<Lexem> Lexems, String String, TreeBranch TopBranch, List<String>? ErrorsList, int ErrorOccurred)(LexemStream x) => x.Parse();
 }

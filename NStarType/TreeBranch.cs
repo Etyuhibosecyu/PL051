@@ -4,6 +4,7 @@ global using NStar.Linq;
 global using NStar.MathLib;
 global using System;
 global using System.Diagnostics;
+global using static PL051.NStar.NStarType;
 global using G = System.Collections.Generic;
 global using String = NStar.Core.String;
 
@@ -163,10 +164,8 @@ public sealed class TreeBranch
 		Extra = branch.Extra;
 	}
 
-	public override bool Equals(object? obj) => obj is not null
-		&& obj is TreeBranch m
-		&& Name == m.Name && RedStarLinq.Equals(Elements, m.Elements, (x, y) => x.Equals(y)
-		&& (x.Extra?.Equals(y.Extra) ?? y.Extra is null));
+	public override bool Equals(object? obj) => obj is TreeBranch m && (ReferenceEquals(this, m) || Name == m.Name
+		&& (Extra?.Equals(m.Extra) ?? m.Extra is null) && RedStarLinq.Equals(Elements, m.Elements, (x, y) => x.Equals(y)));
 
 	public override int GetHashCode() => Name.GetHashCode() ^ Elements.GetHashCode() ^ (Extra?.GetHashCode() ?? 77777777);
 
@@ -201,15 +200,8 @@ public sealed class TreeBranch
 	}
 
 	public static bool operator ==(TreeBranch? x, TreeBranch? y) => x is null && y is null || x is not null && y is not null
-		&& x.Name == y.Name && RedStarLinq.Equals(x.Elements, y.Elements, (x, y) => x.Equals(y))
-		&& (x.Extra?.Equals(y.Extra) ?? y.Extra is null);
+		&& (ReferenceEquals(x, y) || x.Name == y.Name && RedStarLinq.Equals(x.Elements, y.Elements, (x, y) => x.Equals(y))
+		&& (x.Extra?.Equals(y.Extra) ?? y.Extra is null));
 
 	public static bool operator !=(TreeBranch? x, TreeBranch? y) => !(x == y);
-
-	private sealed class TreeBranchComparer : G.IEqualityComparer<TreeBranch>
-	{
-		public bool Equals(TreeBranch? x, TreeBranch? y) => x is null && y is null || (x?.Equals(y) ?? false);
-
-		public int GetHashCode(TreeBranch x) => x.GetHashCode();
-	}
 }

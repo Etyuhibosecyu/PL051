@@ -5,8 +5,9 @@ using System;
 using System.Collections;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using static System.Math;
+using static PL051.NStar.NStarType;
 using static PL051.NStar.TypeConverters;
+using static System.Math;
 using Complex = RedStarMath.Complex;
 using String = NStar.Core.String;
 
@@ -228,6 +229,27 @@ public static class JsonConverters
 			}
 			var type = value.GetType();
 			var fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+			if (fields.Length == 1 && type.GetCustomAttribute<InlineArrayAttribute>() is InlineArrayAttribute attribute
+				&& value.GetType().GetMethod("ToList", BindingFlags.Instance | BindingFlags.Public) is var method
+				&& method is not null)
+			{
+				var length = type.GetGenericArguments().Length == 0
+					? (int?)type.GetField("_size", BindingFlags.Static | BindingFlags.NonPublic)?.GetValue(null)
+					?? throw new InvalidOperationException(PropertyNameError) : attribute.Length;
+				var list = method.Invoke(value, null)
+					?? throw new InvalidOperationException(PropertyNameError);
+				var getValue = list.GetType().GetMethod("get_Item", [typeof(int), typeof(bool)])
+					?? throw new InvalidOperationException(PropertyNameError);
+				writer.WriteRaw("(");
+				var items = new string[length];
+				for (var i = 0; i < length; i++)
+				{
+					items[i] = JsonConvert.SerializeObject(getValue.Invoke(list, [i, false]), SerializerSettings);
+				}
+				writer.WriteRaw(string.Join(", ", items));
+				writer.WriteRaw(")");
+				return;
+			}
 			var outputArray = new string[fields.Length];
 			for (var i = 0; i < fields.Length; i++)
 			{

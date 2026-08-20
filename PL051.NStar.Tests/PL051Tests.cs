@@ -21,14 +21,18 @@ public class PL051Tests
 	private const string A10000 = A1000 + A1000 + A1000 + A1000 + A1000 + A1000 + A1000 + A1000 + A1000 + A1000;
 	private const string A100000 = A10000 + A10000 + A10000 + A10000 + A10000 + A10000 + A10000 + A10000 + A10000 + A10000;
 	private const string A1000000 = "\"" + A100000 + A100000 + A100000 + A100000 + A100000 + A100000 + A100000 + A100000 + A100000 + A100000 + "\"";
-	private const string NL16 = "\n;\n;\n;\n;\n;\n;\n;\n;\n;\n;\n;\n;\n;\n;\n;\n;";
-	private const string NL128 = NL16 + NL16 + NL16 + NL16 + NL16 + NL16 + NL16 + NL16;
+	private const string Five16 = "5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, ";
+	private const string Five64 = Five16 + Five16 + Five16 + Five16;
+	private const string Five256 = Five64 + Five64 + Five64 + Five64;
+	private const string T17 = "T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, ";
+	private const string T85 = T17 + T17 + T17 + T17 + T17;
+	private const string T255 = T85 + T85 + T85;
 
 	[TestMethod]
 	[DataRow("""
 		return ("7" * "2", "7" * 2, 7 * "2", "7" / "2", "7" / 2, 7 / "2", "7" % "2", "7" % 2, 7 % "2", "7" - "2", "7" - 2, 7 - "2")
 
-		""", """(null, "77", "2222222", null, null, null, null, null, null, null, null, null)""", @"Error 4008 in line 1 at position 12: the string cannot be multiplied by the string
+		""", NullString, @"Error 4008 in line 1 at position 12: the string cannot be multiplied by the string
 Error 4009 in line 1 at position 41: the strings cannot be divided or give the remainder (%)
 Error 4009 in line 1 at position 52: the strings cannot be divided or give the remainder (%)
 Error 4009 in line 1 at position 59: the strings cannot be divided or give the remainder (%)
@@ -46,7 +50,7 @@ Error 4007 in line 1 at position 117: the strings cannot be subtracted
 		var bq = "2"
 		return (aq * bq, aq * b, a * bq, aq / bq, aq / b, a / bq, aq % bq, aq % b, a % bq, aq - bq, aq - b, a - bq)
 
-		""", """(null, "77", "2222222", null, null, 0, null, null, 0, null, null, null)""", @"Error 4008 in line 5 at position 11: the string cannot be multiplied by the string
+		""", NullString, @"Error 4008 in line 5 at position 11: the string cannot be multiplied by the string
 Error 4009 in line 5 at position 36: the strings cannot be divided or give the remainder (%)
 Error 4009 in line 5 at position 45: the strings cannot be divided or give the remainder (%)
 Error 4009 in line 5 at position 52: the strings cannot be divided or give the remainder (%)
@@ -60,7 +64,7 @@ Error 4007 in line 5 at position 102: the strings cannot be subtracted
 	[DataRow("""
 		return (("A", 77777, 3.14159) + 5, ("A", 77777, 3.14159) - 5, ("A", 77777, 3.14159) * 5, ("A", 77777, 3.14159) / 5, ("A", 77777, 3.14159) % 5)
 
-		""", """(null, null, null, null, null)""", @"Warning 800F in line 1 at position 0: too long line (128 characters are supported, actually 142)
+		""", NullString, @"Warning 800F in line 1 at position 0: too long line (128 characters are supported, actually 142)
 Error 4006 in line 1 at position 30: cannot apply the operator ""+"" to the types ""(string, int, real)"" and ""byte""
 Error 4006 in line 1 at position 57: cannot apply the operator ""-"" to the types ""(string, int, real)"" and ""byte""
 Error 4006 in line 1 at position 84: cannot apply the operator ""*"" to the types ""(string, int, real)"" and ""byte""
@@ -70,7 +74,7 @@ Error 4006 in line 1 at position 138: cannot apply the operator ""%"" to the typ
 	[DataRow("""
 		return (5 + ("A", 77777, 3.14159), 5 - ("A", 77777, 3.14159), 5 * ("A", 77777, 3.14159), 5 / ("A", 77777, 3.14159), 5 % ("A", 77777, 3.14159))
 
-		""", """(null, null, null, 0, 0)""", """
+		""", NullString, """
 			Warning 800F in line 1 at position 0: too long line (128 characters are supported, actually 142)
 			Error 4006 in line 1 at position 10: cannot apply the operator "+" to the types "byte" and "(string, int, real)"
 			Error 4006 in line 1 at position 37: cannot apply the operator "-" to the types "byte" and "(string, int, real)"
@@ -82,7 +86,7 @@ Error 4006 in line 1 at position 138: cannot apply the operator ""%"" to the typ
 	[DataRow("""
 		return (5 + null, 5 - null, 5 * null, 5 / null, 5 % null, null + 5, null - 5, null * 5, null / 5, null % 5)
 
-		""", """(5, 5, 0, 0, 0, 5, -5, 0, 0, 0)""", @"Error 4006 in line 1 at position 40: cannot apply the operator ""/"" to the types ""byte"" and ""null""
+		""", NullString, @"Error 4006 in line 1 at position 40: cannot apply the operator ""/"" to the types ""byte"" and ""null""
 Error 4006 in line 1 at position 50: cannot apply the operator ""%"" to the types ""byte"" and ""null""
 ")]
 	[DataRow("""
@@ -90,7 +94,7 @@ Error 4006 in line 1 at position 50: cannot apply the operator ""%"" to the type
 		var b = 5
 		return (a + b, a - b, a * b, a / b, a % b, b + a, b - a, b * a, b / a, b % a)
 
-		""", """(null, null, null, null, null, null, null, null, 0, 0)""", @"Error 4006 in line 3 at position 10: cannot apply the operator ""+"" to the types ""(string, int, real)"" and ""byte""
+		""", NullString, @"Error 4006 in line 3 at position 10: cannot apply the operator ""+"" to the types ""(string, int, real)"" and ""byte""
 Error 4006 in line 3 at position 17: cannot apply the operator ""-"" to the types ""(string, int, real)"" and ""byte""
 Error 4006 in line 3 at position 24: cannot apply the operator ""*"" to the types ""(string, int, real)"" and ""byte""
 Error 4006 in line 3 at position 31: cannot apply the operator ""/"" to the types ""(string, int, real)"" and ""byte""
@@ -116,7 +120,7 @@ Error 4003 in line 1 at position 98: cannot compute factorial of this constant
 		var b = null
 		return (a + b, a - b, a * b, a / b, a % b, b + a, b - a, b * a, b / a, b % a)
 
-		""", """(5, 5, 0, 0, 0, 5, -5, 0, 0, 0)""", @"Error 4006 in line 3 at position 31: cannot apply the operator ""/"" to the types ""byte"" and ""null""
+		""", NullString, @"Error 4006 in line 3 at position 31: cannot apply the operator ""/"" to the types ""byte"" and ""null""
 Error 4006 in line 3 at position 38: cannot apply the operator ""%"" to the types ""byte"" and ""null""
 ")]
 	[DataRow(@"return (IntToReal(5), IntToReal(77777), IntToReal(777777777777))
@@ -383,7 +387,7 @@ real c = ""2.71828""
 return (a, b, c)
 ", NullString, @"Error 4027 in line 1 at position 6: the conversion from the type ""real"" to the type ""int"" is possible only in the function return, not in the direct assignment and not in the call
 Error 4027 in line 2 at position 7: the conversion from the type ""int"" to the type ""byte"" is possible only in the function return, not in the direct assignment and not in the call
-Error 4014 in line 3 at position 7: cannot convert from the type ""string"" to the type ""real""
+Error 4014 in line 3 at position 7: cannot convert from the type ""string"" to the type ""real"" during the assignment
 Error 4001 in line 4 at position 8: the identifier ""a"" is not defined in this location
 Error 4001 in line 4 at position 11: the identifier ""b"" is not defined in this location
 Error 4001 in line 4 at position 14: the identifier ""c"" is not defined in this location
@@ -395,12 +399,17 @@ a = 3.14159
 b = 77777
 c = ""2.71828""
 return (a, b, c)
-", @"(0, 0, 0)", @"Error 4027 in line 4 at position 2: the conversion from the type ""real"" to the type ""int"" is possible only in the function return, not in the direct assignment and not in the call
+", NullString, @"Error 4027 in line 4 at position 2: the conversion from the type ""real"" to the type ""int"" is possible only in the function return, not in the direct assignment and not in the call
 Error 4027 in line 5 at position 2: the conversion from the type ""int"" to the type ""byte"" is possible only in the function return, not in the direct assignment and not in the call
-Error 4014 in line 6 at position 2: cannot convert from the type ""string"" to the type ""real""
+Error 4014 in line 6 at position 2: cannot convert from the type ""string"" to the type ""real"" during the assignment
+")]
+	[DataRow(@"() byte bytes = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25)
+return bytes
+", NullString, @"Error 4014 in line 1 at position 14: list can be constructed from tuple of up to 16 elements, if you need more, use the other ways like Chain() or Fill()
+Error 4001 in line 2 at position 7: the identifier ""bytes"" is not defined in this location
 ")]
 	[DataRow(@"bool bool=bool
-", "null", @"Error 4012 in line 1 at position 10: one cannot use the local variable ""bool"" before it is declared or inside such declaration in line 1 at position 0
+", NullString, @"Error 4012 in line 1 at position 10: one cannot use the local variable ""bool"" before it is declared or inside such declaration in line 1 at position 0
 ")]
 	[DataRow(@"bool Function One()
 {
@@ -442,7 +451,6 @@ return F()()
 ", NullString, @"Wreck 9001 in line 1 at position 9: there must be a single character or a single escape-sequence in the single quotes
 ")]
 	[DataRow(@"return '", NullString, @"Wreck 9000 in line 1 at position 8: unexpected end of code reached; expected: single quote
-Wreck 9000 in line 1 at position 8: unexpected end of code reached; expected: single quote
 ")]
 	[DataRow(@"var x = 5
 return 5 pow x += 3
@@ -458,7 +466,7 @@ return a + b
 	[DataRow(@"var a = false
 var b = 5
 return a * b
-", "null", @"Error 4006 in line 3 at position 9: cannot apply the operator ""*"" to the types ""bool"" and ""byte""
+", NullString, @"Error 4006 in line 3 at position 9: cannot apply the operator ""*"" to the types ""bool"" and ""byte""
 ")]
 	[DataRow(@"int Function F(real n)
 {
@@ -497,7 +505,7 @@ return s
 	[DataRow(@"using System
 Func[string, int] typeMismatch = x => x + 1
 return typeMismatch(5)
-", NullString, @"Error 4014 in line 2 at position 38: cannot convert from the type ""int"" to the type ""string"" - use an addition of zero-length string for this
+", NullString, @"Error 4014 in line 2 at position 38: cannot convert from the type ""int"" to the type ""string"" during the exprsession substitution - use an addition of zero-length string for this
 ")]
 	[DataRow(@"using System
 Func[string, string] typeMismatch = x => x + 1
@@ -512,12 +520,12 @@ return typeMismatch(5, 8, 12)
 	[DataRow(@"using System
 Func[string, string] typeMismatch = x => x + 1
 return typeMismatch(5)
-", NullString, @"Error 4014 in line 3 at position 20: cannot convert from the type ""byte"" to the type ""string"" - use an addition of zero-length string for this
+", NullString, @"Error 4014 in line 3 at position 20: cannot convert from the type ""byte"" to the type ""string"" during the call - use an addition of zero-length string for this
 ")]
 	[DataRow(@"int a = 5
 a = new(8)
 return a
-", "0", @"Error 4017 in line 2 at position 4: the type ""int"" cannot be created via the constructor
+", NullString, @"Error 4017 in line 2 at position 4: the type ""int"" cannot be created via the constructor
 Error 4000 in line 2 at position 7: internal compiler error #5
 ")]
 	[DataRow(@"const int a = 5
@@ -531,14 +539,14 @@ const real b = 3.14159
 const string c = ""A""
 const bool d = true
 return (a, b, c, d)
-", "(null, 3.14159, \"A\", true)", @"Error 203D in line 1 at position 11: the constant must have a value
+", NullString, @"Error 203D in line 1 at position 11: the constant must have a value
 Error 4001 in line 5 at position 8: the identifier ""a"" is not defined in this location
 ")]
 	[DataRow(@"const int a = 5
 const real b = 3.14159
 const string c = ""A""
 return (a = 8, b *= 2, c)
-", "(null, null, \"A\")", @"Error 4052 in line 4 at position 10: cannot assign a value to the constant
+", NullString, @"Error 4052 in line 4 at position 10: cannot assign a value to the constant
 Error 4052 in line 4 at position 17: cannot assign a value to the constant
 ")]
 	[DataRow(@"const string A100 = A10 + A10 + A10 + A10 + A10 + A10 + A10 + A10 + A10 + A10
@@ -817,7 +825,7 @@ return s + ""5"" switch
 	_ if false => 3.14159,
 	_ => ""error"",
 }
-", NullString, @"Error 4014 in line 8 at position 6: cannot convert from the type ""string"" to the type ""real""
+", NullString, @"Error 4014 in line 8 at position 6: cannot convert from the type ""string"" to the type ""real"" during the switch expression translation
 ")]
 	[DataRow(@"return 5 switch
 {
@@ -906,14 +914,10 @@ return typeof(x)
 	[DataRow(@"return typeof ""5""
 ", NullString, @"Error 200A in line 1 at position 14: expected: (
 Error 2002 in line 1 at position 14: expected: end of the line
-Error 200A in line 1 at position 14: expected: (
-Error 2002 in line 1 at position 14: expected: end of the line
 ")]
 	[DataRow(@"var x = ""5""
 return typeof x
 ", NullString, @"Error 200A in line 2 at position 14: expected: (
-Error 2002 in line 2 at position 14: expected: end of the line
-Error 200A in line 2 at position 14: expected: (
 Error 2002 in line 2 at position 14: expected: end of the line
 ")]
 	[DataRow(@"return typeof()
@@ -1145,12 +1149,7 @@ int sign2 = (-a).Sign // -1, 0, 1
 unsigned int x = a % 2147483648
 string s = """" + a
 return (a, b, c, d, e, f, g, isGreater, isEqual, abs, negative, negativeType, pow_, sign, sign2, x, s)
-", "(123456789012345678901234567890, 1000, 123456789012345678901234568890, 123456789012345678901234567890000,"
-		+ " 123456789012345678901234566890, 123456789012345678901234567, 890, true, false,"
-		+ " 123456789012345678901234567890, null, long long,"
-		+ " 1881676372353657772546716040589641726257477229849409426207693797722198701224860897069000, 1, -1, 1312754386,"
-		+ @" ""123456789012345678901234567890"")",
-		@"Error 4027 in line 11 at position 28: the conversion from the type ""long long"" to the type ""unsigned long long"" is possible only in the function return, not in the direct assignment and not in the call
+", NullString, @"Error 4027 in line 11 at position 28: the conversion from the type ""long long"" to the type ""unsigned long long"" is possible only in the function return, not in the direct assignment and not in the call
 Error 4001 in line 18 at position 54: the identifier ""negative"" is not defined in this location
 ")]
 	[DataRow(@"return 2LL pow 100
@@ -1201,10 +1200,9 @@ complex c4 = new complex(0.1 + 0.2, 0)
 complex c5 = new complex(0.3, 0)
 bool almostEqual = c4 == c5 // Может быть false из-за погрешностей FP!
 return (c1, c2, zero, divByZero, nan, inf, bad, i, r, pow_, badPolar, almostEqual)
-", @"(3+4i, 5+0i, 0+0i, Uncty+Unctyi, Uncty+0i, Infty+0i, Uncty+0i, 0, null, 0+0i, -1+0i, false)",
-		@"Error 2012 in line 10 at position 19: expected: identifier or basic expression or expression in round brackets
+", NullString, @"Error 2012 in line 10 at position 19: expected: identifier or basic expression or expression in round brackets
 Error 4006 in line 8 at position 11: cannot apply the operator ""%"" to the types ""complex"" and ""unsigned int""
-Error 4014 in line 9 at position 7: cannot convert from the type ""complex"" to the type ""real""
+Error 4014 in line 9 at position 7: cannot convert from the type ""complex"" to the type ""real"" during the assignment
 Error 4001 in line 15 at position 51: the identifier ""r"" is not defined in this location
 ")]
 	[DataRow(@"var x = 7c
@@ -1274,7 +1272,7 @@ return z
 ", "0", "Ошибок нет")]
 	[DataRow(@"var x = 200r >>> 3
 return x
-", "0", @"Error 4083 in line 1 at position 13: the first operand of the operators ""<<<"" and "">>>"" must be of the type byte, short char, short int, unsigned short int, char, int, unsigned int, long char, long int, unsigned long int, long long or unsigned long long
+", NullString, @"Error 4083 in line 1 at position 13: the first operand of the operators ""<<<"" and "">>>"" must be of the type byte, short char, short int, unsigned short int, char, int, unsigned int, long char, long int, unsigned long int, long long or unsigned long long
 ")]
 	[DataRow(@"real zero = 0
 var z = zero >>> 10
@@ -1288,25 +1286,25 @@ return z
 ")]
 	[DataRow(@"unsigned int x = 100 >>> 2.5
 return x
-", "0", @"Error 4081 in line 1 at position 21: the second operand of the operator "">>>"" must be of the type, convertible to int
+", NullString, @"Error 4081 in line 1 at position 21: the second operand of the operator "">>>"" must be of the type, convertible to int
 ")]
 	[DataRow(@"int a = 10
 unsigned int b = 5
 unsigned int c = a >>> b
 return c
-", "0", @"Error 4081 in line 3 at position 19: the second operand of the operator "">>>"" must be of the type, convertible to int
+", NullString, @"Error 4081 in line 3 at position 19: the second operand of the operator "">>>"" must be of the type, convertible to int
 ")]
 	[DataRow(@"unsigned int x = 100
 unsigned int y = x >>> 2.5
 return y
-", "0", @"Error 4081 in line 2 at position 19: the second operand of the operator "">>>"" must be of the type, convertible to int
+", NullString, @"Error 4081 in line 2 at position 19: the second operand of the operator "">>>"" must be of the type, convertible to int
 ")]
 	[DataRow(@"var x = 200r << 3
 return x
 ", "1600", "Ошибок нет")]
 	[DataRow(@"var x = 200r <<< 3
 return x
-", "0", @"Error 4083 in line 1 at position 13: the first operand of the operators ""<<<"" and "">>>"" must be of the type byte, short char, short int, unsigned short int, char, int, unsigned int, long char, long int, unsigned long int, long long or unsigned long long
+", NullString, @"Error 4083 in line 1 at position 13: the first operand of the operators ""<<<"" and "">>>"" must be of the type byte, short char, short int, unsigned short int, char, int, unsigned int, long char, long int, unsigned long int, long long or unsigned long long
 ")]
 	[DataRow(@"var x = 200r >> 3
 return x
@@ -1429,8 +1427,7 @@ return (f ^^ f, f ^^ t, t ^^ f, t ^^ t, f ^^ f ^^ f, f ^^ t ^^ f, t ^^ f ^^ f, t
 	[DataRow(@"var f = false
 var t = 5
 return (f ^^ t, t ^^ f, t ^^ t, f ^^ t ^^ f, t ^^ f ^^ f, t ^^ t ^^ f, f ^^ f ^^ t, f ^^ t ^^ t, t ^^ f ^^ t, t ^^ t ^^ t)
-", NullString,
-		@"Error 4084 in line 3 at position 13: the operator ""^^"" works only with the operands of the type, convertible to bool
+", NullString, @"Error 4084 in line 3 at position 13: the operator ""^^"" works only with the operands of the type, convertible to bool
 Error 4084 in line 3 at position 16: the operator ""^^"" works only with the operands of the type, convertible to bool
 Error 4084 in line 3 at position 24: the operator ""^^"" works only with the operands of the type, convertible to bool
 Error 4084 in line 3 at position 37: the operator ""^^"" works only with the operands of the type, convertible to bool
@@ -1502,7 +1499,7 @@ return x;
 ", "true", "Ошибок нет")]
 	[DataRow(@"object obj = 5;
 return (obj is byte, obj is real, IntToReal(obj) is real);
-", "(true, false, null)", @"Error 4026 in line 2 at position 44: incompatibility between the type of the parameter of the call ""object"" and the type of the parameter of the function ""System.IIntegerNumber[object]""
+", NullString, @"Error 4026 in line 2 at position 44: incompatibility between the type of the parameter of the call ""object"" and the type of the parameter of the function ""System.IIntegerNumber[object]""
 Error 40A1 in line 2 at position 49: the expression of the type ""null"" cannot be matched with the pattern of the type ""real""
 ")]
 	[DataRow(@"int value = 10;
@@ -1602,23 +1599,23 @@ return (pair.Equals(pair2), pair.Equals(pair3))
 Pair pair = new(""Status"", 100)
 pair.Value = 200
 return pair
-", @"(""Status"", 100)", @"Error 4070 in line 3 at position 5: the property ""Pair.Value"" is get-only and cannot be set
+", NullString, @"Error 4070 in line 3 at position 5: the property ""Pair.Value"" is get-only and cannot be set
 ")]
 	[DataRow(@"Record Pair(string Name, int Value)
 Pair pair = new(""Status"", 100)
 pair.Value++
 return pair
-", @"(""Status"", 100)", @"Error 4070 in line 3 at position 5: the property ""Pair.Value"" is get-only and cannot be set
+", NullString, @"Error 4070 in line 3 at position 5: the property ""Pair.Value"" is get-only and cannot be set
 ")]
 	[DataRow(@"abstract Record Pair(string Name, int Value)
 Pair pair = new(""Status"", 100)
 return pair
-", @"(""Status"", 100)", @"Error 0005 in line 1 at position 0: incorrect word or order of words in construction declaration
+", NullString, @"Error 0005 in line 1 at position 0: incorrect word or order of words in construction declaration
 ")]
 	[DataRow(@"static Record Pair(string Name, int Value)
 Pair pair = new(""Status"", 100)
 return pair
-", @"(""Status"", 100)", @"Error 0005 in line 1 at position 0: incorrect word or order of words in construction declaration
+", NullString, @"Error 0005 in line 1 at position 0: incorrect word or order of words in construction declaration
 ")]
 	[DataRow(@"const string A1000000 = A100000 + A100000 + A100000 + A100000 + A100000 + A100000 + A100000 + A100000 + A100000 + A100000;
 const string A100000 = A10000 + A10000 + A10000 + A10000 + A10000 + A10000 + A10000 + A10000 + A10000 + A10000;
@@ -1682,7 +1679,7 @@ return x;", "8", "Ошибок нет")]
 }
 var x = 5;
 x += 3;
-return x;", "null", @"Wreck 901E in line 1 at position 16: the IO context can be introduced only inside the IO function
+return x;", NullString, @"Wreck 901E in line 1 at position 16: the IO context can be introduced only inside the IO function
 ")]
 	[DataRow(@"IO int Function F()
 {
@@ -1711,7 +1708,7 @@ return x;", "8", "Ошибок нет")]
 }
 var x = 5;
 x += 3;
-return x;", "null", @"Wreck 901E in line 1 at position 15: the IO context can be introduced only inside the IO function
+return x;", NullString, @"Wreck 901E in line 1 at position 15: the IO context can be introduced only inside the IO function
 ")]
 	[DataRow(@"IO null Function F(int n)
 {
@@ -1719,7 +1716,7 @@ return x;", "null", @"Wreck 901E in line 1 at position 15: the IO context can be
 }
 var x = 5;
 x += 3;
-return x;", "8", @"Error 4028 in line 3 at position 28: incompatibility between the type of the parameter of the call ""byte[5]"" and all possible types of the parameter of the function (""System.Collections.IEnumerable[T]"")
+return x;", NullString, @"Error 4028 in line 3 at position 28: incompatibility between the type of the parameter of the call ""byte[5]"" and all possible types of the parameter of the function (""System.Collections.IEnumerable[T]"")
 ")]
 	[DataRow(@"IO int Function F(int n)
 {
@@ -1728,7 +1725,7 @@ return x;", "8", @"Error 4028 in line 3 at position 28: incompatibility between 
 }
 var x = 5;
 x += 3;
-return x;", "8", @"Error 4028 in line 3 at position 28: incompatibility between the type of the parameter of the call ""byte[5]"" and all possible types of the parameter of the function (""System.Collections.IEnumerable[T]"")
+return x;", NullString, @"Error 4028 in line 3 at position 28: incompatibility between the type of the parameter of the call ""byte[5]"" and all possible types of the parameter of the function (""System.Collections.IEnumerable[T]"")
 ")]
 	[DataRow(@"IO null Function F(int n)
 {
@@ -1753,7 +1750,7 @@ return x;
 }
 var x = 5;
 x += 3;
-return x;", "null", @"Wreck 901E in line 3 at position 2: the IO context can be introduced only inside the IO function
+return x;", NullString, @"Wreck 901E in line 3 at position 2: the IO context can be introduced only inside the IO function
 ")]
 	[DataRow(@"int Function F(int n)
 {
@@ -1762,7 +1759,7 @@ return x;", "null", @"Wreck 901E in line 3 at position 2: the IO context can be 
 }
 var x = 5;
 x += 3;
-return x;", "null", @"Wreck 901E in line 3 at position 2: the IO context can be introduced only inside the IO function
+return x;", NullString, @"Wreck 901E in line 3 at position 2: the IO context can be introduced only inside the IO function
 ")]
 	[DataRow(@"using System;
 using System.IO;
@@ -1994,22 +1991,22 @@ else if (2 == 2)
 ", NullString, @"Wreck 9021 in line 3 at position 1: nested control flow without an enclosing block is not allowed. Add { } around the outer statement
 ")]
 	[DataRow(@"return true & true == true
-", False, @"Error 2009 in line 1 at position 19: ambiguous operator combination ""=="" and ""&"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 19: ambiguous operator combination ""=="" and ""&"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return true | true == true
-", False, @"Error 2009 in line 1 at position 19: ambiguous operator combination ""=="" and ""|"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 19: ambiguous operator combination ""=="" and ""|"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return true ^ true == true
-", False, @"Error 2009 in line 1 at position 19: ambiguous operator combination ""=="" and ""^"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 19: ambiguous operator combination ""=="" and ""^"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return true == true & true
-", False, @"Error 2009 in line 1 at position 26: ambiguous operator combination ""=="" and ""&"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 26: ambiguous operator combination ""=="" and ""&"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return true == true | true
-", False, @"Error 2009 in line 1 at position 26: ambiguous operator combination ""=="" and ""|"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 26: ambiguous operator combination ""=="" and ""|"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return true == true ^ true
-", False, @"Error 2009 in line 1 at position 26: ambiguous operator combination ""=="" and ""^"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 26: ambiguous operator combination ""=="" and ""^"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return true == (true & true)
 ", "true", "Ошибок нет")]
@@ -2036,22 +2033,22 @@ else if (2 == 2)
 	[DataRow(@"return true ^ (true == true)
 ", False, "Ошибок нет")]
 	[DataRow(@"return true & true != true
-", "true", @"Error 2009 in line 1 at position 19: ambiguous operator combination ""!="" and ""&"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 19: ambiguous operator combination ""!="" and ""&"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return true | true != true
-", "true", @"Error 2009 in line 1 at position 19: ambiguous operator combination ""!="" and ""|"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 19: ambiguous operator combination ""!="" and ""|"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return true ^ true != true
-", "true", @"Error 2009 in line 1 at position 19: ambiguous operator combination ""!="" and ""^"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 19: ambiguous operator combination ""!="" and ""^"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return true != true & true
-", "true", @"Error 2009 in line 1 at position 26: ambiguous operator combination ""!="" and ""&"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 26: ambiguous operator combination ""!="" and ""&"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return true != true | true
-", "true", @"Error 2009 in line 1 at position 26: ambiguous operator combination ""!="" and ""|"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 26: ambiguous operator combination ""!="" and ""|"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return true != true ^ true
-", "true", @"Error 2009 in line 1 at position 26: ambiguous operator combination ""!="" and ""^"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 26: ambiguous operator combination ""!="" and ""^"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return true != (true & true)
 ", False, "Ошибок нет")]
@@ -2078,22 +2075,22 @@ else if (2 == 2)
 	[DataRow(@"return true ^ (true != true)
 ", "true", "Ошибок нет")]
 	[DataRow(@"return 1 & 1 >= 1
-", False, @"Error 2009 in line 1 at position 13: ambiguous operator combination "">="" and ""&"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 13: ambiguous operator combination "">="" and ""&"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 | 1 >= 1
-", False, @"Error 2009 in line 1 at position 13: ambiguous operator combination "">="" and ""|"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 13: ambiguous operator combination "">="" and ""|"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 ^ 1 >= 1
-", False, @"Error 2009 in line 1 at position 13: ambiguous operator combination "">="" and ""^"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 13: ambiguous operator combination "">="" and ""^"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 >= 1 & 1
-", "true", @"Error 2009 in line 1 at position 9: ambiguous operator combination "">="" and ""&"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 9: ambiguous operator combination "">="" and ""&"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 >= 1 | 1
-", "true", @"Error 2009 in line 1 at position 9: ambiguous operator combination "">="" and ""|"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 9: ambiguous operator combination "">="" and ""|"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 >= 1 ^ 1
-", "true", @"Error 2009 in line 1 at position 9: ambiguous operator combination "">="" and ""^"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 9: ambiguous operator combination "">="" and ""^"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 >= (1 & 1)
 ", "true", "Ошибок нет")]
@@ -2120,22 +2117,22 @@ else if (2 == 2)
 	[DataRow(@"return 1 ^ (1 >= 1)
 ", "0", "Ошибок нет")]
 	[DataRow(@"return 1 & 1 <= 1
-", "true", @"Error 2009 in line 1 at position 13: ambiguous operator combination ""<="" and ""&"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 13: ambiguous operator combination ""<="" and ""&"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 | 1 <= 1
-", "true", @"Error 2009 in line 1 at position 13: ambiguous operator combination ""<="" and ""|"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 13: ambiguous operator combination ""<="" and ""|"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 ^ 1 <= 1
-", "true", @"Error 2009 in line 1 at position 13: ambiguous operator combination ""<="" and ""^"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 13: ambiguous operator combination ""<="" and ""^"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 <= 1 & 1
-", False, @"Error 2009 in line 1 at position 9: ambiguous operator combination ""<="" and ""&"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 9: ambiguous operator combination ""<="" and ""&"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 <= 1 | 1
-", False, @"Error 2009 in line 1 at position 9: ambiguous operator combination ""<="" and ""|"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 9: ambiguous operator combination ""<="" and ""|"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 <= 1 ^ 1
-", False, @"Error 2009 in line 1 at position 9: ambiguous operator combination ""<="" and ""^"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 9: ambiguous operator combination ""<="" and ""^"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 <= (1 & 1)
 ", "true", "Ошибок нет")]
@@ -2162,22 +2159,22 @@ else if (2 == 2)
 	[DataRow(@"return 1 ^ (1 <= 1)
 ", "0", "Ошибок нет")]
 	[DataRow(@"return 1 & 1 > 1
-", False, @"Error 2009 in line 1 at position 13: ambiguous operator combination "">"" and ""&"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 13: ambiguous operator combination "">"" and ""&"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 | 1 > 1
-", False, @"Error 2009 in line 1 at position 13: ambiguous operator combination "">"" and ""|"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 13: ambiguous operator combination "">"" and ""|"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 ^ 1 > 1
-", False, @"Error 2009 in line 1 at position 13: ambiguous operator combination "">"" and ""^"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 13: ambiguous operator combination "">"" and ""^"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 > 1 & 1
-", "true", @"Error 2009 in line 1 at position 9: ambiguous operator combination "">"" and ""&"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 9: ambiguous operator combination "">"" and ""&"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 > 1 | 1
-", "true", @"Error 2009 in line 1 at position 9: ambiguous operator combination "">"" and ""|"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 9: ambiguous operator combination "">"" and ""|"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 > 1 ^ 1
-", "true", @"Error 2009 in line 1 at position 9: ambiguous operator combination "">"" and ""^"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 9: ambiguous operator combination "">"" and ""^"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 > (1 & 1)
 ", False, "Ошибок нет")]
@@ -2204,22 +2201,22 @@ else if (2 == 2)
 	[DataRow(@"return 1 ^ (1 > 1)
 ", "1", "Ошибок нет")]
 	[DataRow(@"return 1 & 1 < 1
-", "true", @"Error 2009 in line 1 at position 13: ambiguous operator combination ""<"" and ""&"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 13: ambiguous operator combination ""<"" and ""&"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 | 1 < 1
-", "true", @"Error 2009 in line 1 at position 13: ambiguous operator combination ""<"" and ""|"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 13: ambiguous operator combination ""<"" and ""|"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 ^ 1 < 1
-", "true", @"Error 2009 in line 1 at position 13: ambiguous operator combination ""<"" and ""^"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 13: ambiguous operator combination ""<"" and ""^"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 < 1 & 1
-", False, @"Error 2009 in line 1 at position 9: ambiguous operator combination ""<"" and ""&"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 9: ambiguous operator combination ""<"" and ""&"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 < 1 | 1
-", False, @"Error 2009 in line 1 at position 9: ambiguous operator combination ""<"" and ""|"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 9: ambiguous operator combination ""<"" and ""|"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 < 1 ^ 1
-", False, @"Error 2009 in line 1 at position 9: ambiguous operator combination ""<"" and ""^"" detected - use parentheses for clarification
+", NullString, @"Error 2009 in line 1 at position 9: ambiguous operator combination ""<"" and ""^"" detected - use parentheses for clarification
 ")]
 	[DataRow(@"return 1 < (1 & 1)
 ", False, "Ошибок нет")]
@@ -2365,7 +2362,7 @@ return (BuildPath(3, route), route)
 	x++;
 }
 return F(-5);
-", "0", @"Error 402A in line 3 at position 1: this function or lambda must return the value on all execution paths
+", NullString, @"Error 402A in line 3 at position 1: this function or lambda must return the value on all execution paths
 ")]
 	[DataRow(@"int Function F(int x)
 {
@@ -2405,7 +2402,7 @@ return F(-5);
 	return x * (x +/*=*/ 1);
 }
 return (F(-5), F(3), F(0));
-", "(1, 5, 2)", @"Error 4013 in line 15 at position 8: the variable ""x"" is already defined in this location or in the location that contains this in line 1 at position 15
+", NullString, @"Error 4013 in line 15 at position 8: the variable ""x"" is already defined in this location or in the location that contains this in line 1 at position 15
 ")]
 	[DataRow(@"int Function ForLoopFunction(list() int list)
 {
@@ -2513,7 +2510,7 @@ for (i in 0..10)
 	list.Add(i);
 }
 return list;
-", "()", @"Error 4082 in line 2 at position 11: the index operator and the range operator work only with the positive numbers
+", NullString, @"Error 4082 in line 2 at position 11: the index operator and the range operator work only with the positive numbers
 ")]
 	[DataRow(@"() int list = new();
 for (i in ^10..^0)
@@ -2521,7 +2518,7 @@ for (i in ^10..^0)
 	list.Add(i);
 }
 return list;
-", "()", @"Error 4082 in line 2 at position 15: the index operator and the range operator work only with the positive numbers
+", NullString, @"Error 4082 in line 2 at position 15: the index operator and the range operator work only with the positive numbers
 ")]
 	[DataRow(@"() int list = new();
 for (i in 0..^0)
@@ -2529,7 +2526,7 @@ for (i in 0..^0)
 	list.Add(i);
 }
 return list;
-", "()", @"Error 4082 in line 2 at position 13: the index operator and the range operator work only with the positive numbers
+", NullString, @"Error 4082 in line 2 at position 13: the index operator and the range operator work only with the positive numbers
 Error 4082 in line 2 at position 11: the index operator and the range operator work only with the positive numbers
 ")]
 	[DataRow(@"using System
@@ -2540,7 +2537,7 @@ return ""Hello, world!"".ToList[char]().Convert(x => x + 1)
 ", "(73, 102, 109, 109, 112, 45, 33, 120, 112, 115, 109, 101, 34)", "Ошибок нет")]
 	[DataRow(@"using System
 return ""Hello, world!"".ToList[char]().Filter(x => x + 1)
-", "()", @"Error 4014 in line 2 at position 50: cannot convert from the type ""char"" to the type ""bool""
+", NullString, @"Error 4014 in line 2 at position 50: cannot convert from the type ""char"" to the type ""bool"" during the lambda translation
 ")]
 	[DataRow(@"() real nums = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
 var evens = nums.Filter(x => x % 2 == 0)
@@ -2629,36 +2626,36 @@ return (firstThree, afterTwo, combo)
 ", "((1, 2, 3), (3, 4, 5, 6, 7), (2, 3, 4))", "Ошибок нет")]
 	[DataRow(@"() real nums = (1, 2, 3)
 real r = nums.NonExistent(x => true)
-", "null", @"Error 4033 in line 2 at position 14: the type ""list"" does not contain member ""NonExistent""
+", NullString, @"Error 4033 in line 2 at position 14: the type ""list"" does not contain member ""NonExistent""
 ")]
 	[DataRow(@"real x = 42
 () real r = x.Filter(v => v > 0)
-", "null", @"Error 4033 in line 2 at position 14: the type ""real"" does not contain member ""Filter""
+", NullString, @"Error 4033 in line 2 at position 14: the type ""real"" does not contain member ""Filter""
 ")]
 	[DataRow(@"() real nums = (1, 2, 3)
 real r = nums.Filter(true)
-", "null", @"Error 4028 in line 2 at position 21: incompatibility between the type of the parameter of the call ""bool"" and all possible types of the parameter of the function (""System.Func[bool, real]"", ""System.Func[bool, real, int]"")
+", NullString, @"Error 4028 in line 2 at position 21: incompatibility between the type of the parameter of the call ""bool"" and all possible types of the parameter of the function (""System.Func[bool, real]"", ""System.Func[bool, real, int]"")
 ")]
 	[DataRow(@"() real nums = (1, 2, 3, 4)
 real r = nums.Filter(x => x > 0).NonExistent(x => x * 2).Sum()
-", "null", @"Error 4033 in line 2 at position 33: the type ""System.Collections.IEnumerable"" does not contain member ""NonExistent""
+", NullString, @"Error 4033 in line 2 at position 33: the type ""System.Collections.IEnumerable"" does not contain member ""NonExistent""
 ")]
 	[DataRow(@"() real nums = (1, 2, 3)
 () real bad = nums.Filter()
 () real bad2 = nums.Filter(x => x > 0, true)
-", "null", @"Error 4022 in line 2 at position 25: the function ""Filter"" must have 1 parameters
+", NullString, @"Error 4022 in line 2 at position 25: the function ""Filter"" must have 1 parameters
 Error 4022 in line 3 at position 27: the function ""Filter"" must have 1 parameters
 ")]
 	[DataRow(@"() int nums = (1, 2, 3)
 real r = nums.Progression(""hello"", (acc, x) => acc + x)
 return r
-", "0", @"Error 4014 in line 2 at position 47: cannot convert from the type ""int"" to the type ""char""
+", NullString, @"Error 4014 in line 2 at position 47: cannot convert from the type ""int"" to the type ""char"" during the lambda translation
 Error 4026 in line 2 at position 26: incompatibility between the type of the parameter of the call ""string"" and the type of the parameter of the function ""char""
 ")]
 	[DataRow(@"() real nums = (1.0, 2.0, 3.0)
 real r = nums.Progression(0r, (acc, x) => ""oops"")
 return r
-", "0", @"Error 4014 in line 2 at position 42: cannot convert from the type ""string"" to the type ""real""
+", NullString, @"Error 4014 in line 2 at position 42: cannot convert from the type ""string"" to the type ""real"" during the lambda translation
 ")]
 	[DataRow(@"return ((5..10).ToList(), (..3).ToList(), (^10..^5).ToList(), (^3..).ToList(), (3..^3).Length, (..).Length)
 ", "((5, 6, 7, 8, 9, 10), (1, 2, 3), (2147483638, 2147483639, 2147483640, 2147483641, 2147483642, 2147483643), (2147483645, 2147483646, 2147483647), 2147483643, 2147483647)", "Ошибок нет")]
@@ -2670,7 +2667,7 @@ return r
 	LastQuarter = 3,
 }
 return (PhaseOfMoon.FirstQuarter, typeof(PhaseOfMoon.FirstQuarter))
-", "(1, byte)", @"Error 000C in line 1 at position 0: the private and protected types are allowed only inside the other types
+", NullString, @"Error 000C in line 1 at position 0: the private and protected types are allowed only inside the other types
 ")]
 	[DataRow(@"private Enum PhaseOfMoon
 {
@@ -2680,7 +2677,7 @@ return (PhaseOfMoon.FirstQuarter, typeof(PhaseOfMoon.FirstQuarter))
 	LastQuarter = 3,
 }
 return (PhaseOfMoon.FirstQuarter, typeof(PhaseOfMoon.FirstQuarter))
-", "(1, byte)", @"Error 000C in line 1 at position 0: the private and protected types are allowed only inside the other types
+", NullString, @"Error 000C in line 1 at position 0: the private and protected types are allowed only inside the other types
 ")]
 	[DataRow(@"private Enum PhaseOfMoon : byte
 {
@@ -2691,7 +2688,7 @@ return (PhaseOfMoon.FirstQuarter, typeof(PhaseOfMoon.FirstQuarter))
 }
 PhaseOfMoon x = PhaseOfMoon.FirstQuarter
 return (x, typeof(x))
-", "(1, byte)", @"Error 000C in line 1 at position 0: the private and protected types are allowed only inside the other types
+", NullString, @"Error 000C in line 1 at position 0: the private and protected types are allowed only inside the other types
 ")]
 	[DataRow(@"private Enum PhaseOfMoon
 {
@@ -2702,7 +2699,7 @@ return (x, typeof(x))
 }
 PhaseOfMoon x = PhaseOfMoon.FirstQuarter
 return (x, typeof(x))
-", "(1, int)", @"Error 000C in line 1 at position 0: the private and protected types are allowed only inside the other types
+", NullString, @"Error 000C in line 1 at position 0: the private and protected types are allowed only inside the other types
 ")]
 	[DataRow(@"Enum PhaseOfMoon : string
 {
@@ -2773,7 +2770,7 @@ Enum B : A
 {
 	Y = 1,
 }
-", "null", @"Error 203F in line 5 at position 9: the enum cannot be derived from the enum
+", NullString, @"Error 203F in line 5 at position 9: the enum cannot be derived from the enum
 ")]
 	[DataRow(@"Enum Color
 {
@@ -2781,7 +2778,7 @@ Enum B : A
 	Green = 1,
 	Red = 2,
 }
-", "null", @"Error 2021 in line 5 at position 1: the property or constant ""Red"" is already defined in this region
+", NullString, @"Error 2021 in line 5 at position 1: the property or constant ""Red"" is already defined in this region
 ")]
 	[DataRow(@"Enum Season
 {
@@ -2789,10 +2786,10 @@ Enum B : A
 	Summer = 1,
 }
 Season s = Season.Autumn
-", "null", @"Error 4033 in line 6 at position 18: the type ""Season"" does not contain member ""Autumn""
+", NullString, @"Error 4033 in line 6 at position 18: the type ""Season"" does not contain member ""Autumn""
 ")]
 	[DataRow(@"Enum Empty { }
-", "null", @"Error 2040 in line 1 at position 0: the enum must have at least one member
+", NullString, @"Error 2040 in line 1 at position 0: the enum must have at least one member
 ")]
 	[DataRow(@"Enum Flags : byte
 {
@@ -2800,7 +2797,7 @@ Season s = Season.Autumn
 	Flag1 = -1,
 }
 return Flags.Flag1
-", "null", @"Error 4014 in line 4 at position 9: cannot convert from the type ""short int"" to the type ""byte""
+", NullString, @"Error 4014 in line 4 at position 9: cannot convert from the type ""short int"" to the type ""byte"" during getting the constant value
 ")]
 	[DataRow(@"using System
 using System.Net
@@ -2817,7 +2814,7 @@ var receiveLen2 = BitConverter.ToInt(receiveLen)
 var receive = RedStarLinq.EmptyList[byte](receiveLen2)
 stream.ReadExactly(receive)
 return Encoding.UTF8.GetString(receive).ToString()
-", "null", "Ошибок нет")]
+", NullString, "Ошибок нет")]
 	[DataRow(@"using System
 using System.Net
 using System.Text
@@ -2831,7 +2828,7 @@ var toSendLen = BitConverter.GetBytes(toSend.Length)
 netStream.Write(toSendLen)
 netStream.Write(toSend)
 netStream.Flush()
-", "null", "Ошибок нет")]
+", NullString, "Ошибок нет")]
 	[DataRow(@"Class MyClass
 {
 	int a = 5;
@@ -3001,7 +2998,7 @@ return MyClass.F(5);
 }
 MyClass.F();
 return MyClass.F(5);
-", "25", @"Error 0005 in line 1 at position 7: incorrect word or order of words in construction declaration
+", NullString, @"Error 0005 in line 1 at position 7: incorrect word or order of words in construction declaration
 ")]
 	[DataRow(@"static sealed Class MyClass
 {
@@ -3015,7 +3012,7 @@ return MyClass.F(5);
 }
 MyClass.F();
 return MyClass.F(5);
-", "25", @"Error 0005 in line 1 at position 7: incorrect word or order of words in construction declaration
+", NullString, @"Error 0005 in line 1 at position 7: incorrect word or order of words in construction declaration
 ")]
 	[DataRow(@"static Class MyClass
 {
@@ -3725,7 +3722,7 @@ MyClass2 a2 = new MyClass2(8, 2.71828, ""$"");
 MyClass2 a3 = new MyClass2(8, 2.71828);
 MyClass2 a4 = new MyClass2(true);
 return (a1, a2, a3, a4);
-", """(new MyClass2(), null, null, new MyClass2())""", @"Error 2015 in line 8 at position 17: expected: non-sealed class or interface
+", NullString, @"Error 2015 in line 8 at position 17: expected: non-sealed class or interface
 Error 4001 in line 13 at position 3: the identifier ""a"" is not defined in this location
 Error 4060 in line 17 at position 27: the constructor of the type ""MyClass2"" must have from 0 to 1 parameters
 Error 4060 in line 18 at position 27: the constructor of the type ""MyClass2"" must have from 0 to 1 parameters
@@ -3797,8 +3794,7 @@ MyClass2 a2 = new MyClass2(8, 2.71828, ""$"");
 MyClass2 a3 = new MyClass2(8, 2.71828);
 MyClass2 a4 = new MyClass2(true);
 return (a1, a2, a3, a4);
-", @"(new MyClass2(5, 3.14159, ""A""), null, new MyClass2(8, 2.71828, ""A""), new MyClass2(12, 3.14159, ""A""))",
-	@"Error 4060 in line 18 at position 27: the constructor of the type ""MyClass2"" must have from 0 to 2 parameters
+", NullString, @"Error 4060 in line 18 at position 27: the constructor of the type ""MyClass2"" must have from 0 to 2 parameters
 ")]
 	[DataRow(@"Class Person
 {
@@ -3837,7 +3833,7 @@ return (person.GetName(), person.GetAge());
 
 Person person = new Person(""Alice"", 30);
 return (person.GetName(), person.GetAge());
-", @"(""Alice"", null)", @"Error 402B in line 13 at position 9: incompatibility between the type of the returning value ""int"" and the function return type ""string"" - use an addition of zero-length string for this
+", NullString, @"Error 402B in line 13 at position 9: incompatibility between the type of the returning value ""int"" and the function return type ""string"" - use an addition of zero-length string for this
 ")]
 	[DataRow(@"Class Animal
 {
@@ -4167,7 +4163,7 @@ return a;
 var p = new Person();
 p.Name = ""Alice"";
 return p;
-", "new Person(null)", @"Error 4039 in line 6 at position 2: the property ""Person.Name"" cannot be set from here
+", NullString, @"Error 4039 in line 6 at position 2: the property ""Person.Name"" cannot be set from here
 ")]
 	[DataRow(@"Class Config
 {
@@ -4176,7 +4172,7 @@ return p;
 var c = new Config[100]();
 c.Timeout = 200;
 return c;
-", "new Config(100)", @"Error 403A in line 6 at position 2: the property ""Config.Timeout"" is declared with ""init"" modifier so it can be set only in the initializer or constructor
+", NullString, @"Error 403A in line 6 at position 2: the property ""Config.Timeout"" is declared with ""init"" modifier so it can be set only in the initializer or constructor
 ")]
 	[DataRow(@"Class Config
 {
@@ -4191,7 +4187,7 @@ return c;
 }
 var c = new Config[""100""]();
 return c;
-", NullString, @"Error 4014 in line 5 at position 19: cannot convert from the type ""string"" to the type ""int""
+", NullString, @"Error 4014 in line 5 at position 19: cannot convert from the type ""string"" to the type ""int"" during the construction
 ")]
 	[DataRow(@"Class Secret
 {
@@ -4226,7 +4222,7 @@ Class Inner
 }
 var o = new Outer[new Inner()]();
 return o;
-", "new Outer(null)", @"Error 403C in line 10 at position 27: you must set the required properties - it is done with the square brackets
+", NullString, @"Error 403C in line 10 at position 27: you must set the required properties - it is done with the square brackets
 ")]
 	[DataRow(@"Class Outer
 {
@@ -4285,7 +4281,7 @@ return p;
 var settings = new Settings[true, 30]();
 settings.IsActive = false;
 return settings;
-", "new Settings(true, 30)", @"Error 403A in line 7 at position 9: the property ""Settings.IsActive"" is declared with ""init"" modifier so it can be set only in the initializer or constructor
+", NullString, @"Error 403A in line 7 at position 9: the property ""Settings.IsActive"" is declared with ""init"" modifier so it can be set only in the initializer or constructor
 ")]
 	[DataRow(@"Class Account
 {
@@ -4295,7 +4291,7 @@ return settings;
 }
 var acc = new Account[""user1"", 100.0]();
 return acc;
-", NullString, @"Error 4014 in line 7 at position 22: cannot convert from the type ""string"" to the type ""real""
+", NullString, @"Error 4014 in line 7 at position 22: cannot convert from the type ""string"" to the type ""real"" during the construction
 ")]
 	[DataRow(@"Class Company
 {
@@ -4312,7 +4308,7 @@ Class Address
 // Код, вызывающий ошибку:
 var company = new Company[""Acme"", new Address[""New York""]()]();
 return company;
-", @"new Company(""Acme"", null)", @"Error 403D in line 14 at position 56: the required property ""Street"" must be set during the construction
+", NullString, @"Error 403D in line 14 at position 56: the required property ""Street"" must be set during the construction
 ")]
 	[DataRow(@"Class Batch
 {
@@ -4329,7 +4325,7 @@ return batch;
 Person p = new();
 p.Name = ""Alice"";
 return p;
-", "new Person(null)", @"Error 4039 in line 6 at position 2: the property ""Person.Name"" cannot be set from here
+", NullString, @"Error 4039 in line 6 at position 2: the property ""Person.Name"" cannot be set from here
 ")]
 	[DataRow(@"Class Config
 {
@@ -4338,7 +4334,7 @@ return p;
 Config[100] c = new();
 c.Timeout = 200;
 return c;
-", "new Config(100)", @"Error 403A in line 6 at position 2: the property ""Config.Timeout"" is declared with ""init"" modifier so it can be set only in the initializer or constructor
+", NullString, @"Error 403A in line 6 at position 2: the property ""Config.Timeout"" is declared with ""init"" modifier so it can be set only in the initializer or constructor
 ")]
 	[DataRow(@"Class Config
 {
@@ -4353,7 +4349,7 @@ return c;
 }
 Config[""100""] c = new();
 return c;
-", NullString, @"Error 4014 in line 5 at position 7: cannot convert from the type ""string"" to the type ""int""
+", NullString, @"Error 4014 in line 5 at position 7: cannot convert from the type ""string"" to the type ""int"" during the construction
 ")]
 	[DataRow(@"Class Secret
 {
@@ -4382,7 +4378,7 @@ Class Inner
 }
 Outer[new Inner()] o = new();
 return o;
-", "new Outer(null)", @"Error 403C in line 10 at position 15: you must set the required properties - it is done with the square brackets
+", NullString, @"Error 403C in line 10 at position 15: you must set the required properties - it is done with the square brackets
 ")]
 	[DataRow(@"Class Outer
 {
@@ -4441,7 +4437,7 @@ return p;
 Settings[true, 30] settings = new();
 settings.IsActive = false;
 return settings;
-", "new Settings(true, 30)", @"Error 403A in line 7 at position 9: the property ""Settings.IsActive"" is declared with ""init"" modifier so it can be set only in the initializer or constructor
+", NullString, @"Error 403A in line 7 at position 9: the property ""Settings.IsActive"" is declared with ""init"" modifier so it can be set only in the initializer or constructor
 ")]
 	[DataRow(@"Class Account
 {
@@ -4451,7 +4447,7 @@ return settings;
 }
 Account[""user1"", 100.0] acc = new();
 return acc;
-", NullString, @"Error 4014 in line 7 at position 8: cannot convert from the type ""string"" to the type ""real""
+", NullString, @"Error 4014 in line 7 at position 8: cannot convert from the type ""string"" to the type ""real"" during the construction
 ")]
 	[DataRow(@"Class Company
 {
@@ -4466,7 +4462,7 @@ Class Address
 }
 Company[""Acme"", new Address[""New York""]()] company = new();
 return company;
-", @"new Company(""Acme"", null)", @"Error 403D in line 12 at position 38: the required property ""Street"" must be set during the construction
+", NullString, @"Error 403D in line 12 at position 38: the required property ""Street"" must be set during the construction
 ")]
 	[DataRow(@"Class Batch
 {
@@ -4518,7 +4514,7 @@ var s1 = new Secret(""123"");
 var s2 = new Secret[true, ""789""](""456"");
 var s3 = new Secret[false](""abc"");
 return (s1, s2, s3);
-", @"(new Secret(true, ""123""), null, new Secret(false, ""abc""))", @"Error 403F in line 13 at position 26: redundant property initializer - this class does not have so many open settable properties
+", NullString, @"Error 403F in line 13 at position 26: redundant property initializer - this class does not have so many open settable properties
 ")]
 	[DataRow(@"Class Person
 {
@@ -4552,7 +4548,7 @@ var p1 = new Product[10.5](""P123"");
 var p2 = new Product(""P456"");
 var p3 = new Product[20, ""P789"", ""Books""]();
 return (p1, p2, p3);
-", @"(new Product(10.5, ""P123"", null), null, new Product(20, ""P789"", ""Books""))", @"Error 403C in line 17 at position 20: you must set the required properties - it is done with the square brackets
+", NullString, @"Error 403C in line 17 at position 20: you must set the required properties - it is done with the square brackets
 ")]
 	[DataRow(@"Class Product
 {
@@ -4573,7 +4569,7 @@ Product[10.5] p1 = new(""P123"");
 Product p2 = new(""P456"");
 Product[20, ""P789"", ""Books""] p3 = new();
 return (p1, p2, p3);
-", @"(new Product(10.5, ""P123"", null), null, new Product(20, ""P789"", ""Books""))", @"Error 403C in line 17 at position 16: you must set the required properties - it is done with the square brackets
+", NullString, @"Error 403C in line 17 at position 16: you must set the required properties - it is done with the square brackets
 ")]
 	[DataRow(@"Class Parent
 {
@@ -4627,7 +4623,7 @@ Class Child : Parent
 	}
 }
 return new Parent().Secret;
-", @"""parent-secret""", @"Error 4070 in line 10 at position 2: the property ""Parent.Secret"" is get-only and cannot be set
+", NullString, @"Error 4070 in line 10 at position 2: the property ""Parent.Secret"" is get-only and cannot be set
 ")]
 	[DataRow(@"Class MyClass
 {
@@ -4643,7 +4639,7 @@ return new Parent().Secret;
 	}
 }
 return (new MyClass().Secret, new MyClass(""override-secret"").Secret);
-", @"(""my-secret"", ""my-secret"")", @"Error 4070 in line 11 at position 2: the property ""MyClass.Secret"" is get-only and cannot be set
+", NullString, @"Error 4070 in line 11 at position 2: the property ""MyClass.Secret"" is get-only and cannot be set
 ")]
 	[DataRow(@"const [typename, (abstract Class)] BaseStack = new(var T:
 {
@@ -5416,15 +5412,97 @@ return (x, y);
 ", @"((10, 5), (""B"", ""A""))", "Ошибок нет")]
 	[DataRow(@"return ((56).ToChar(), 56u.ToChar(), 56L.ToChar(), 56uL.ToChar(), 56LL.ToChar())
 ", "('8', '8', '8', '8', '8')", "Ошибок нет")]
+	[DataRow(@"bool[1000000] tuple = null
+tuple[123456] = true
+return (tuple[123455], tuple[123456], tuple[123457])
+", "(false, true, false)", "Ошибок нет")]
+	[DataRow(@"const typename T = int
+T Function Func(T a, T b, T c, T d, T e, T f, T g, T h, T i, T j, T k, T l, T m, T n, T o, T p, T q, T r, T s, T t, T u, T v,"
++ @" T w, T x, T y, T z, T A, T B, T C, T D, T E, T F, T G, T H, T I, T J, T K, T L, T M, T N, T O, T P, T Q, T R, T S, T U,"
++ @" T V, T W, T X, T Y, T Z, T aa, T ab, T ac, T ad, T ae, T af, T ag, T ah, T ai, T aj, T ak, T al, T am, T an, T ao, T ap, T aq, T ar, T as)
+{
+	return a
+}
+", NullString, @"Warning 800F in line 2 at position 0: too long line (128 characters are supported, actually 384)
+Wreck 9022 in line 2 at position 99: the function, constructor or extent cannot have more than 16 parameters
+")]
+	[DataRow(@"() byte bytes = (" + Five256 + @"5, 5, 5, 5)
+return bytes;
+", NullString, @"Warning 800F in line 1 at position 0: too long line (128 characters are supported, actually 796)
+Error 401A in line 1 at position 785: the tuple literal cannot contain more than 256 items - use the external storage (such as the file) for the larger tuples (all the items have been set to null)
+")]
+	[DataRow(@"const typename T = byte;
+(" + T255 + @"T) bytes = null;
+return bytes[^1];
+", "0", "Ошибок нет")]
+	[DataRow(@"const typename T = byte;
+(" + T255 + @"T, T) bytes = null;
+return bytes[^1];
+", NullString, @"Error 2041 in line 2 at position 772: the non-singular tuple cannot have more than 256 items; group them into several nested tuples or convert to one type and use singular tuple
+")]
+	[DataRow(@"bool[3] bools = (false, true, false)
+return (bools[1], bools[2], bools[3])
+", "(false, true, false)", "Ошибок нет")]
+	[DataRow(@"bool[3] bools = (false, true, false)
+return bools
+", "(false, true, false)", "Ошибок нет")]
+	[DataRow(@"bool[3] bools = (false, false, false)
+bools[1] = true
+bools[3] = true
+return (bools[1], bools[2], bools[^1])
+", "(true, false, true)", "Ошибок нет")]
+	[DataRow(@"bool[3] bools = (false, false, false)
+var len = bools.Length
+for (var x in bools) { }
+", NullString, @"Error 4033 in line 2 at position 16: the type ""tuple"" does not contain member ""Length""
+")]
+	[DataRow(@"const N = 4
+bool[N] b = (true, false, true, false)
+return b
+", "(true, false, true, false)", "Ошибок нет")]
+	[DataRow(@"bool[5] Function Invert(bool[5] values)
+{
+	for (i in..5)
+		values[i]!!
+	return values
+}
+return Invert((false, true, true, false, false))
+", "(true, false, false, true, true)", "Ошибок нет")]
+	[DataRow(@"var bools = (false, true, false)
+() bool list = new()
+for (var x in bools)
+{
+	list.Add(x)
+}
+return list
+", "(false, true, false)", "Ошибок нет")]
+	[DataRow(@"var n = 4
+bool[n] bools = (true, false, true, false)
+", NullString, @"Error 4050 in line 2 at position 5: this expression must be constant but it isn't
+")]
+	[DataRow(@"bool[2] Function Func(bool[2] bools)
+{
+	return bools
+}
+var a = true
+return Func((a > 0) ? (true, false) : (false, true))
+", "(true, false)", "Ошибок нет")]
+	[DataRow(@"() bool[3] list = ((true, false, true), (false, false, true))
+return list.ConvertAndJoin[bool[3], bool](x => x.ToList())
+", "(true, false, true, false, false, true)", "Ошибок нет")]
+	[DataRow(@"bool[100000000] bools = null
+bools[99999999] = true
+return bools[^2]
+", "true", "Ошибок нет")]
 	[DataRow(@"var x = 5
 return ++x
-", "5", "Error 2039 in line 2 at position 7: the prefix increment/decrement operators (\"++x\") were removed from PL051"
+", NullString, "Error 2039 in line 2 at position 7: the prefix increment/decrement operators (\"++x\") were removed from PL051"
 		+ " because of their obscurity and ability to produce the \"dirty\" code;"
 		+ " use either the postfix increment/decrement operators (\"x++\")"
 		+ " or the composite assignment operators (\"x += 1\")\r\n")]
 	[DataRow(@"var x = 5
 return --x
-", "5", "Error 2039 in line 2 at position 7: the prefix increment/decrement operators (\"++x\") were removed from PL051"
+", NullString, "Error 2039 in line 2 at position 7: the prefix increment/decrement operators (\"++x\") were removed from PL051"
 		+ " because of their obscurity and ability to produce the \"dirty\" code;"
 		+ " use either the postfix increment/decrement operators (\"x++\")"
 		+ " or the composite assignment operators (\"x += 1\")\r\n")]
@@ -5502,9 +5580,15 @@ return (a1, a2, a3, a4, a5, a6)
 
 	private static void TestInternal(string Key, string TargetResult, string TargetErrors)
 	{
-		String result;
-		if ((result = ExecuteProgram(Key, [], out var errors)) == TargetResult
-			&& (TargetErrors is null || errors == TargetErrors))
+		String result = default!, errors = default!;
+		var thread = new System.Threading.Thread(() => result = ExecuteProgram(Key, [], out errors), int.MaxValue)
+		{
+			Name = "Program translation"
+		};
+		thread.Start();
+		thread.IsBackground = true;
+		thread.Join();
+		if (result == TargetResult && (TargetErrors is null || errors == TargetErrors))
 			return;
 		String message = "Error: @\"" + Key.Replace("\"", "\"\"") + "\"";
 		if (result != TargetResult)
@@ -5520,7 +5604,7 @@ return (a1, a2, a3, a4, a5, a6)
 		{
 			var cpl = errors.AsSpan().CommonPrefixLength(TargetErrors);
 			var split = TargetErrors[..cpl].Split("\r\n");
-			var line = split.Length + 1;
+			var line = split.Length;
 			var position = split.Length == 0 ? 0 : split[^1].Length;
 			message.AddRange(" and produced errors @\"" + errors.Replace("\"", "\"\"")
 				+ "\" instead of @\"" + TargetErrors.Replace("\"", "\"\"")

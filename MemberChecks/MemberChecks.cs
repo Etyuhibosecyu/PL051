@@ -116,7 +116,7 @@ public static class MemberChecks
 			return true;
 		var sourceTypes = restrictions.ToList(x => new NStarType(new(new Block(BlockType.Extra, x.Name, 1)), NoBranches));
 		var destinationTypes = container.ExtraTypes
-			.ToList(x => x.Value.Name == "type" && x.Value.Extra is NStarType NStarType ? NStarType : NullType);
+			.ToList(x => x.Name == "type" && x.Extra is NStarType NStarType ? NStarType : NullType);
 		if (container.ExtraTypes.Length == 1 && container.ExtraTypes[0].Name == "List")
 			destinationTypes.AddRange(container.ExtraTypes[0].Elements.Convert(GetBranchType));
 		destinationTypes.FilterInPlace(x => !x.Equals(NullType));
@@ -185,7 +185,7 @@ public static class MemberChecks
 			return false;
 		}
 		var netProperty = netType.GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.FlattenHierarchy)
-			.Find(x => x.IsInitOnly && x.Name == name.ToString());
+			.Find(x => (x.IsInitOnly || x.IsLiteral && !netType.IsEnum) && x.Name == name.ToString());
 		if (netProperty is null)
 		{
 			constant = null;
@@ -255,6 +255,14 @@ public static class MemberChecks
 			functions = default;
 			return false;
 		}
+		if (name == "ToList" && TypeEqualsToPrimitive(container, TupleName, false)
+			&& (container.ExtraTypes.AllEqual() || container.ExtraTypes.Length == 2
+			&& container.ExtraTypes[1].Length == 0 && int.TryParse(container.ExtraTypes[1].Name.AsSpan(), out _))
+			&& container.ExtraTypes[0].Name == "type" && container.ExtraTypes[0].Extra is NStarType TupleItemNStarType)
+		{
+			functions = [new(name, [], GetListType(TupleItemNStarType), FunctionAttributes.None, [], null)];
+			return true;
+		}
 		var netType = TypeMapping(container);
 		if (container.ExtraTypes.Length == 0)
 		{
@@ -263,7 +271,7 @@ public static class MemberChecks
 			else if (netType == typeof(ValueTask<>))
 				netType = typeof(ValueTask);
 		}
-		var callParameterNetTypes = typeParameters.Concat(callParameterTypes).ToArray(TypeMapping);
+		var callParameterNetTypes = callParameterTypes.ToArray(TypeMapping);
 		var validity = int.MinValue;
 		var methods = netType.GetMethods().Filter(x => x.Name == name).Concat(ExtraTypes.Values
 			.ConvertAndJoin(x => x.IsAbstract && x.IsSealed && x.GetGenericArguments().Length == 0 ? x.GetMethods()
@@ -287,8 +295,9 @@ public static class MemberChecks
 			var extentOffset = (method.DeclaringType is null
 				|| method.DeclaringType.IsAbstract && method.DeclaringType.IsSealed)
 				&& method.DeclaringType != netType ? 1 : 0;
-			var patterns = GetReplacementPatterns(genericArguments,
-				extentOffset == 1 ? [.. callParameterNetTypes.Prepend(netType)] : callParameterNetTypes);
+			var patterns = genericArguments.Combine(typeParameters.Convert(TypeMapping)).ToList()
+				.AddRange(GetReplacementPatterns(genericArguments,
+				extentOffset == 1 ? [.. callParameterNetTypes.Prepend(netType)] : callParameterNetTypes));
 			var returnNetType = method.ReturnType;
 			var parameters = method.GetParameters();
 			var functionParameterTypes = parameters.ToArray(x => x.ParameterType);
@@ -434,7 +443,7 @@ public static class MemberChecks
 #pragma warning disable S2234
 			var patterns = GetNStarReplacementPatterns(functionOverload.ExtraTypes, callParameterTypes, functionParameterTypes)
 				.AddRange(GetNStarReplacementPatterns(functionOverload.ExtraTypes, functionParameterTypes, callParameterTypes))
-				.FilterInPlace(x => !x.TypeToInsert.ExtraTypes.Values
+				.FilterInPlace(x => !x.TypeToInsert.ExtraTypes
 				.Any(y => y.Name == "type" && y.Extra is NStarType NStarType && NStarType.MainType.TryPeek(out var block)
 				&& block.Name.Equals(x.ExtraType)));
 #pragma warning restore S2234
@@ -576,9 +585,9 @@ public static class MemberChecks
 			ExtendedMethodParameters parameters = [.. function.Parameters.Convert(x =>
 				new ExtendedMethodParameter(x.Type, x.Name, x.Attributes, x.DefaultValue))];
 			callParameterTypes = callParameterTypes.Copy();
-			var extraTypes = container.ExtraTypes.Values;
-			if (extraTypes.Count == 1 && extraTypes.First() is var extraType && extraType.Name == "List")
-				extraTypes = extraType.Elements;
+			var extraTypes = container.ExtraTypes;
+			if (extraTypes.Length == 1 && extraTypes.First() is var extraType && extraType.Name == "List")
+				extraTypes = [.. extraType.Elements];
 			foreach (var x in extraTypes)
 			{
 				TreeBranch branch;
@@ -651,9 +660,9 @@ public static class MemberChecks
 					continue;
 				}
 				result.AddRange(GetNStarReplacementPatterns(genericArguments,
-					callParameterType.ExtraTypes.ToList(x => x.Value.Name == "type" && x.Value.Extra is NStarType NStarType
+					callParameterType.ExtraTypes.ToList(x => x.Name == "type" && x.Extra is NStarType NStarType
 					? NStarType : NullType),
-					functionParameterType.ExtraTypes.ToList(x => x.Value.Name == "type" && x.Value.Extra is NStarType NStarType
+					functionParameterType.ExtraTypes.ToList(x => x.Name == "type" && x.Extra is NStarType NStarType
 					? NStarType : NullType)));
 			}
 		}
@@ -706,7 +715,7 @@ public static class MemberChecks
 				| (method.IsStatic ? ConstructorAttributes.Static : 0),
 				new(constructorParameterTypes.ToList((x, index) => new ExtendedMethodParameter(TypeMappingBack(x,
 				netType.GetGenericArguments(), [.. container.ExtraTypes.SkipWhile(x =>
-				x.Value.Name != "type" || x.Value.Extra is not NStarType)]).Wrap(y =>
+				x.Name != "type" || x.Extra is not NStarType)]).Wrap(y =>
 				Attribute.IsDefined(parameters[index], typeof(ParamArrayAttribute)) ? GetSubtype(y) : y),
 				parameters[index].Name ?? "x",
 				(parameters[index].IsOptional ? ParameterAttributes.Optional : 0)
@@ -747,7 +756,7 @@ public static class MemberChecks
 			ExtendedMethodParameters parameters = [.. Parameters.Convert(x =>
 				new ExtendedMethodParameter(x.Type, x.Name, x.Attributes, x.DefaultValue))];
 			var constructorParameterTypes = parameters.ToList(x => x.Type);
-			var typeParameters = container.ExtraTypes.ConvertAndJoin(x => x.Value.Length == 0 ? [x.Value] : x.Value.Elements)
+			var typeParameters = container.ExtraTypes.ConvertAndJoin(x => x.Length == 0 ? [x] : x.Elements)
 				.ConvertAndJoin(x =>
 			{
 				if (x.Name == "Hypername" && x.Length == 1)
@@ -787,8 +796,14 @@ public static class MemberChecks
 			|| type.MainType.Length == 1
 			&& UserDefinedConstantExists(container, type.MainType.Peek().Name, out _, out _, out _)))
 			return false;
+		if (type.ExtraTypes.Length != 0
+			&& (type.ExtraTypes.AllEqual() || type.ExtraTypes.Length == 2
+			&& type.ExtraTypes[1].Length == 0 && int.TryParse(type.ExtraTypes[1].Name.AsSpan(), out _))
+			&& type.ExtraTypes[0].Name == "type" && type.ExtraTypes[0].Extra is NStarType ItemNStarType
+			&& TypeIsFullySpecified(ItemNStarType, container))
+			return true;
 		foreach (var x in type.ExtraTypes)
-			if (x.Value.Name == "type" && x.Value.Extra is NStarType InnerNStarType
+			if (x.Name == "type" && x.Extra is NStarType InnerNStarType
 				&& !TypeIsFullySpecified(InnerNStarType, container))
 				return false;
 		return true;

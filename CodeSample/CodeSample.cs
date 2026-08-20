@@ -52,15 +52,15 @@ public class CodeSample(String newString)
 		new('?', [new('!', ['='], allowNone: false), EqualLexemTree('>'), EqualLexemTree('<'),
 			'=', '?', '.', '[']), ',', ':', '@', '#', '$', '~', DoubleEqualLexemTree('+'), DoubleEqualLexemTree('-'),
 		EqualLexemTree('*'), EqualLexemTree('/'), EqualLexemTree('%'), new LexemTree('=', ['=', '>']), TripleLexemTree('.')];
-	private static readonly ImmutableArray<string> NoSpaceBefore = [".", "..", ",", "++", "--", ")", "]", ";", "\r\n"];
+	private static readonly ImmutableArray<string> NoSpaceBefore = [".", "..", ",", "++", "--", "!!", ")", "]", ";", "\r\n"];
 	private static readonly ImmutableArray<string> NoSpaceAfter = [".", "..", "!", "~", "#", "(", "[", "$", "\r\n"];
 	private readonly List<Lexem> lexems = [];
 	private readonly List<String> lexemTexts = [];
 	private readonly List<int> lexemFullStarts = [];
 	private readonly String input = newString.Length == 0 ? "return null;" : newString;
-	private int pos, lineStart, nestedConditions;
+	private int pos, lineStart, nestedConditions, errorOccurred;
 	private int lineN = 1;
-	private bool wreckOccurred, condition, elseCondition;
+	private bool condition, elseCondition;
 	private readonly List<String> errors = [];
 
 	private static LexemTree EqualLexemTree(char c) => new(c, ['=']);
@@ -75,7 +75,7 @@ public class CodeSample(String newString)
 
 	private static LexemTree TripleEqualLexemTree(char c) => new(c, [.. DoubleEqualLexemTreeList(c), '='], true);
 
-	public (List<Lexem> Lexems, String String, List<String> ErrorsList, bool WreckOccurred) Disassemble(bool format = false)
+	public (List<Lexem> Lexems, String String, List<String> ErrorsList, int errorOccurred) Disassemble(bool format = false)
 	{
 		while (IsNotEnd())
 		{
@@ -94,23 +94,23 @@ public class CodeSample(String newString)
 					continue;
 				else if (!@return)
 					break;
-				if (format && !errors.Any(x => !x.StartsWith("Warning")) && !wreckOccurred)
+				if (format && !errors.Any(x => !x.StartsWith("Warning")) && errorOccurred != 2)
 					input.Replace(Format());
 				return value;
 			}
 		}
-		if (format && !errors.Any(x => !x.StartsWith("Warning")) && !wreckOccurred)
+		if (format && !errors.Any(x => !x.StartsWith("Warning")) && errorOccurred != 2)
 			input.Replace(Format());
-		return (lexems, input, errors, wreckOccurred);
+		return (lexems, input, errors, errorOccurred);
 	}
 
 	private (bool flowControl, bool @return,
-		(List<Lexem> Lexems, String String, List<String> ErrorsList, bool WreckOccurred) value) DisassembleIteration()
+		(List<Lexem> Lexems, String String, List<String> ErrorsList, int ErrorOccurred) value) DisassembleIteration()
 	{
-		if (wreckOccurred)
-			return (false, true, (lexems, input, errors, true));
+		if (errorOccurred == 2)
+			return (false, true, (lexems, input, errors, errorOccurred));
 		SkipSpacesAndComments();
-		if (wreckOccurred)
+		if (errorOccurred == 2)
 			return (true, false, default);
 		if (!IsNotEnd() || input[pos] is '\r' or '\n')
 		{
@@ -133,7 +133,6 @@ public class CodeSample(String newString)
 			else if (notEnd)
 			{
 				GenerateMessage(0x901D, pos - 1);
-				wreckOccurred = true;
 				return (true, false, default);
 			}
 		}
@@ -207,7 +206,7 @@ public class CodeSample(String newString)
 				}
 				else
 					AddLexem(s, s, LexemType.Identifier, s.Length);
-				return (true, wreckOccurred, default);
+				return (true, errorOccurred == 2, default);
 			}
 		}
 		else if (";()[]{}".Contains(input[pos]))
@@ -215,7 +214,6 @@ public class CodeSample(String newString)
 			if (input[pos] == '{' && nestedConditions > 1)
 			{
 				GenerateMessage(0x9021, pos);
-				wreckOccurred = true;
 				return (true, true, default);
 			}
 			if (input[pos] is '{' or '}')
@@ -292,7 +290,7 @@ public class CodeSample(String newString)
 		while (true)
 		{
 			SkipSpaces();
-			if (wreckOccurred || !(pos <= input.Length - 2 && input[pos] == '/'))
+			if (errorOccurred == 2 || !(pos <= input.Length - 2 && input[pos] == '/'))
 				return;
 			var c = input[pos + 1];
 			if (c == '/')
@@ -311,7 +309,6 @@ public class CodeSample(String newString)
 				else
 				{
 					GenerateMessage(0x9005, pos);
-					wreckOccurred = true;
 					return;
 				}
 			}
@@ -362,7 +359,6 @@ public class CodeSample(String newString)
 				if (bStart)
 				{
 					GenerateMessage(0x9016, pos);
-					wreckOccurred = true;
 					return;
 				}
 				if (spaces > 0 && !redundantSpaces)
@@ -380,7 +376,6 @@ public class CodeSample(String newString)
 				if (tabs > 5)
 				{
 					GenerateMessage(0x9014, pos);
-					wreckOccurred = true;
 					return;
 				}
 				totalWhitespaces++;
@@ -390,7 +385,6 @@ public class CodeSample(String newString)
 			if (totalWhitespaces > 8)
 			{
 				GenerateMessage(0x9015, pos);
-				wreckOccurred = true;
 				return;
 			}
 			pos++;
@@ -817,7 +811,6 @@ public class CodeSample(String newString)
 			string text = "unexpected end of code reached; expected: single quote", bool double_ = false)
 		{
 			GenerateMessage(code, pos, text);
-			wreckOccurred = true;
 			return AddAndReturn(out s2, double_ ? '\"' : '\'');
 		}
 		String GenerateDoubleQuoteWreck(out String s2) =>
@@ -899,7 +892,7 @@ public class CodeSample(String newString)
 		var state = RawStringState.Normal;
 		while (true)
 		{
-			if (wreckOccurred)
+			if (errorOccurred != 0)
 			{
 				s2 = input[start..pos];
 				return result.AddRange(((String)"\"\\").Repeat(depth + 1));
@@ -907,7 +900,6 @@ public class CodeSample(String newString)
 			else if (pos >= input.Length)
 			{
 				GenerateMessage(0x9004, pos, depth + 1);
-				wreckOccurred = true;
 				s2 = input[start..pos];
 				return result.AddRange(((String)"\"\\").Repeat(depth + 1));
 			}
@@ -939,7 +931,6 @@ public class CodeSample(String newString)
 				else
 				{
 					GenerateMessage(0x9005, pos);
-					wreckOccurred = true;
 					s2 = input[start..pos];
 					return result.AddRange("*/").AddRange(((String)"\"\\").Repeat(depth + 1));
 				}
@@ -1025,7 +1016,6 @@ public class CodeSample(String newString)
 			else if (!IsNotEnd())
 			{
 				GenerateMessage(0x9002, pos);
-				wreckOccurred = true;
 				return result.Add('\"');
 			}
 			else
@@ -1071,7 +1061,6 @@ public class CodeSample(String newString)
 			IncreasePosSmoothly();
 		}
 		GenerateMessage(0x9006, pos, depth + 1);
-		wreckOccurred = true;
 	}
 
 	private void ValidateNestedConditions(String s)
@@ -1082,7 +1071,6 @@ public class CodeSample(String newString)
 			if (elseCondition)
 			{
 				GenerateMessage(0x9020, pos - s.Length);
-				wreckOccurred = true;
 			}
 			else
 			{
@@ -1095,12 +1083,10 @@ public class CodeSample(String newString)
 			if (condition)
 			{
 				GenerateMessage(0x901B, pos - s.Length);
-				wreckOccurred = true;
 			}
 			else if (nestedConditions > 0)
 			{
 				GenerateMessage(0x9020, pos - s.Length);
-				wreckOccurred = true;
 			}
 			else
 			{
@@ -1125,8 +1111,14 @@ public class CodeSample(String newString)
 			s.Add('=');
 	}
 
-	private void GenerateMessage(ushort code, int pos, params dynamic[] parameters) =>
+	private void GenerateMessage(ushort code, int pos, params dynamic[] parameters)
+	{
 		Messages.GenerateMessage(errors, code, lineN, pos - lineStart, parameters);
+		if (code >> 12 != 0x8 && errorOccurred == 0)
+			errorOccurred = 1;
+		if (code >> 12 == 0x9)
+			errorOccurred = 2;
+	}
 
 	private String Format()
 	{
@@ -1185,5 +1177,5 @@ public class CodeSample(String newString)
 	}
 
 	public static implicit operator (List<Lexem> Lexems, String String, List<String> ErrorsList,
-		bool WreckOccurred)(CodeSample x) => x.Disassemble();
+		int errorOccurred)(CodeSample x) => x.Disassemble();
 }

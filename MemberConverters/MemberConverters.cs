@@ -39,6 +39,8 @@ public static class MemberConverters
 			"IntRandom" => nameof(IntRandomNumber),
 			nameof(IntRandomNumber) => [],
 			"IntToReal" => "(double)",
+			"IsUncertainty" => nameof(double.IsNaN),
+			nameof(double.IsNaN) => [],
 			"IsSummertime" => nameof(DateTime.IsDaylightSavingTime),
 			nameof(DateTime.IsDaylightSavingTime) => [],
 			nameof(RedStarLinqMath.Max) => ((String)nameof(RedStarLinqMath)).Add('.').AddRange(nameof(RedStarLinqMath.Max)),
@@ -112,6 +114,10 @@ public static class MemberConverters
 
 	public static String PropertyMapping(String property) => property.ToString() switch
 	{
+		"Infty" => nameof(double.PositiveInfinity),
+		nameof(double.PositiveInfinity) => [],
+		"Uncty" => nameof(double.NaN),
+		nameof(double.NaN) => [],
 		"UTCNow" => nameof(DateTime.UtcNow),
 		nameof(DateTime.UtcNow) => [],
 		_ => property.Copy(),

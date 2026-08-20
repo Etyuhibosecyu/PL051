@@ -411,6 +411,11 @@ public static class BuiltInMemberCollections
 	public static Dictionary<(BlockStack Container, String Type), UserDefinedType> UserDefinedTypes { get; } = new(new BlockStackAndStringEComparer());
 
 	/// <summary>
+	/// Sorted by Length, also contains Name and Specified.
+	/// </summary>
+	public static Dictionary<int, (String Name, bool Specified)> InlineArrays { get; } = [];
+
+	/// <summary>
 	/// Sorted by Container, then by Name, also contains Attributes, BaseType, StartPos and EndPos.
 	/// </summary>
 	public static TypeDictionary<ListHashSet<TempType>> TempTypes { get; } = [];

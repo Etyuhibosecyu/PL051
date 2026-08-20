@@ -5,8 +5,11 @@ namespace PL051.NStar;
 internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, TreeBranch Branch,
 	List<Lexem> Lexems, String Default)
 {
-	public String Calculate(ref List<String>? errors, ref int i)
+	private int ErrorOccurred { get; set; }
+
+	public String Calculate(ref List<String>? errors, ref int i, ref int errorOccurred)
 	{
+		ErrorOccurred = errorOccurred;
 		var otherPos = Branch[i].Pos;
 		if (Branch[i - 2].Extra is not NStarType LeftNStarType)
 			LeftNStarType = NullType;
@@ -47,6 +50,7 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 		i = Max(i - 3, 0);
 		Branch[i].Extra ??= op is "<<<" or ">>>" or "<<" or ">>" ? LeftNStarType
 			: GetResultType(LeftNStarType, RightNStarType, Value1.ToString(true), Value2.ToString(true));
+		errorOccurred = ErrorOccurred;
 		return result.Length == 0 ? Branch[i].Name : result;
 	}
 
@@ -134,11 +138,13 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 		NStarType PrevNStarType)
 	{
 		if (!(TypeIsPrimitive(LeftNStarType.MainType) && LeftNStarType.MainType.Peek().Name.AsSpan() is NullString
-			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName or CharTypeName or IntTypeName or UnsignedIntTypeName
+			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
+			or CharTypeName or IntTypeName or UnsignedIntTypeName
 			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
 			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName
 			&& TypeIsPrimitive(RightNStarType.MainType) && RightNStarType.MainType.Peek().Name.AsSpan() is NullString
-			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName or CharTypeName or IntTypeName or UnsignedIntTypeName
+			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
+			or CharTypeName or IntTypeName or UnsignedIntTypeName
 			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
 			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName))
 		{
@@ -168,11 +174,13 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 		NStarType PrevNStarType)
 	{
 		if (!(TypeIsPrimitive(LeftNStarType.MainType) && LeftNStarType.MainType.Peek().Name.AsSpan() is NullString
-			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName or CharTypeName or IntTypeName or UnsignedIntTypeName
+			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
+			or CharTypeName or IntTypeName or UnsignedIntTypeName
 			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
 			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName
 			&& TypeIsPrimitive(RightNStarType.MainType) && RightNStarType.MainType.Peek().Name.AsSpan() is ByteTypeName
-			or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName or CharTypeName or IntTypeName or UnsignedIntTypeName
+			or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
+			or CharTypeName or IntTypeName or UnsignedIntTypeName
 			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
 			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName))
 		{
@@ -209,11 +217,13 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 		NStarType PrevNStarType)
 	{
 		if (!(TypeIsPrimitive(LeftNStarType.MainType) && LeftNStarType.MainType.Peek().Name.AsSpan() is NullString
-			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName or CharTypeName or IntTypeName or UnsignedIntTypeName
+			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
+			or CharTypeName or IntTypeName or UnsignedIntTypeName
 			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
 			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName
 			&& TypeIsPrimitive(RightNStarType.MainType) && RightNStarType.MainType.Peek().Name.AsSpan() is ByteTypeName
-			or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName or CharTypeName or IntTypeName or UnsignedIntTypeName
+			or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
+			or CharTypeName or IntTypeName or UnsignedIntTypeName
 			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
 			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName))
 		{
@@ -249,12 +259,16 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 	private String TranslateTimePlusExpr(ref List<String>? errors, ref int i, NStarType LeftNStarType, NStarType RightNStarType,
 		NStarType PrevNStarType)
 	{
-		if (!(TypeIsPrimitive(LeftNStarType.MainType) && LeftNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName
-			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName or CharTypeName or IntTypeName or UnsignedIntTypeName
+		if (!(TypeIsPrimitive(LeftNStarType.MainType)
+			&& LeftNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName
+			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
+			or CharTypeName or IntTypeName or UnsignedIntTypeName
 			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
 			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName
-			&& TypeIsPrimitive(RightNStarType.MainType) && RightNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName
-			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName or CharTypeName or IntTypeName or UnsignedIntTypeName
+			&& TypeIsPrimitive(RightNStarType.MainType)
+			&& RightNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName
+			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
+			or CharTypeName or IntTypeName or UnsignedIntTypeName
 			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
 			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName))
 		{
@@ -294,12 +308,16 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 	private String TranslateTimeMinusExpr(ref List<String>? errors, ref int i,
 		NStarType LeftNStarType, NStarType RightNStarType, NStarType PrevNStarType)
 	{
-		if (!(TypeIsPrimitive(LeftNStarType.MainType) && LeftNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName
-			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName or CharTypeName or IntTypeName or UnsignedIntTypeName
+		if (!(TypeIsPrimitive(LeftNStarType.MainType)
+			&& LeftNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName
+			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
+			or CharTypeName or IntTypeName or UnsignedIntTypeName
 			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
 			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName
-			&& TypeIsPrimitive(RightNStarType.MainType) && RightNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName
-			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName or CharTypeName or IntTypeName or UnsignedIntTypeName
+			&& TypeIsPrimitive(RightNStarType.MainType)
+			&& RightNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName
+			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
+			or CharTypeName or IntTypeName or UnsignedIntTypeName
 			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
 			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName))
 		{
@@ -450,7 +468,9 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 	private void GenerateMessage(ref List<String>? errors, ushort code, Index pos, params dynamic[] parameters)
 	{
 		Messages.GenerateMessage(ref errors, code, Lexems[pos].LineN, Lexems[pos].Pos, parameters);
+		if (code >> 12 != 0x8 && ErrorOccurred == 0)
+			ErrorOccurred = 1;
 		if (code >> 12 == 0x9)
-			throw new InvalidOperationException();
+			ErrorOccurred = 2;
 	}
 }

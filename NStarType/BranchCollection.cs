@@ -1,36 +1,56 @@
-﻿namespace PL051.NStar;
+﻿using System.Reflection;
+
+namespace PL051.NStar;
 
 [DebuggerDisplay("{ToString()}")]
-public class BranchCollection : Dictionary<String, TreeBranch>
+public class BranchCollection : List<TreeBranch>
 {
-	public TreeBranch this[int index] { get => Values.ElementAt(index); set => this[Keys.ElementAt(index)] = value; }
+	public BranchCollection() : base() { }
 
-	public BranchCollection() : base()
+	public BranchCollection(G.IDictionary<String?, TreeBranch> collection) : this(collection.Values)
 	{
+		foreach (var key in collection.Keys)
+			if (key is not null)
+				Keys.Add(key, Keys.Length);
 	}
 
-	public BranchCollection(G.IDictionary<String, TreeBranch> collection) : base(collection)
+	public BranchCollection(G.IEnumerable<G.KeyValuePair<String?, TreeBranch>> collection)
 	{
+		foreach (var item in collection)
+		{
+			if (item.Key is not null)
+				Keys.Add(item.Key, _size);
+			Add(item.Value);
+		}
 	}
 
-	public BranchCollection(G.IEnumerable<TreeBranch> collection) : this()
-	{
-		foreach (var elem in collection)
-			Add(elem);
-	}
+	public BranchCollection(G.IEnumerable<TreeBranch> collection) : base(collection) { }
 
-	public virtual void Add(TreeBranch item) => Add(String.ReturnOrConstruct("Item" + (Length + 1).ToString()), item);
+	public virtual void Add(String? key, TreeBranch item)
+	{
+		if (key is not null)
+			Keys.Add(key, _size);
+		Add(item);
+	}
 
 	public virtual void AddRange(BranchCollection collection)
 	{
-		foreach (var elem in collection)
-			Add(elem.Key, elem.Value);
+		foreach (var item in collection.Keys)
+			Keys.Add(item.Key, item.Value + _size);
+		base.AddRange(collection);
 	}
 
-	public virtual void AddRange(G.IEnumerable<TreeBranch> collection)
+	public Mirror<String, int> Keys { get; } = [];
+
+	public TreeBranch this[String key]
 	{
-		foreach (var elem in collection)
-			Add(elem);
+		get => Keys.TryGetValue(key, out var index) ? this[index] : throw new G.KeyNotFoundException();
+		set
+		{
+			if (!Keys.TryGetValue(key, out var index))
+				throw new G.KeyNotFoundException();
+			this[index] = value;
+		}
 	}
 
 	public override bool Equals(object? obj)
@@ -39,10 +59,7 @@ public class BranchCollection : Dictionary<String, TreeBranch>
 			return false;
 		if (Length != m.Length)
 			return false;
-		for (var i = 0; i < Length; i++)
-			if (this[i] != m[i])
-				return false;
-		return true;
+		return this.Combine(m).All(x => x.Item1 == x.Item2);
 	}
 
 	public override int GetHashCode()
@@ -61,19 +78,34 @@ public class BranchCollection : Dictionary<String, TreeBranch>
 		return hash;
 	}
 
+	public virtual bool Remove(String key)
+	{
+		if (Keys.TryGetValue(key, out var index))
+		{
+			Keys.RemoveKey(key);
+			RemoveAt(index);
+			return true;
+		}
+		return false;
+	}
+
 	public virtual void Replace(BranchCollection collection)
 	{
 		Clear();
 		AddRange(collection);
 	}
 
-	public virtual void Replace(G.IEnumerable<TreeBranch> collection)
+	public virtual bool TryAdd(String key, TreeBranch value)
 	{
-		Clear();
-		AddRange(collection);
+		if (Keys.TryAdd(key, _size))
+		{
+			Add(value);
+			return true;
+		}
+		return false;
 	}
 
-	public override string ToString() => string.Join(", ", Values.ToArray(x => x.ToShortString()));
+	public override string ToString() => string.Join(", ", this.ToArray(x => x.ToShortString()));
 
 	public static bool operator ==(BranchCollection? x, BranchCollection? y) => x?.Equals(y) ?? y is null;
 

@@ -6,7 +6,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
 		<ProjectReference Include="..\NStarEntity\NStarEntity.csproj" />
 		<Reference Include="RedStarMath">
 			<HintPath>..\BuiltInMemberCollections\packages\RedStarMath.dll</HintPath>

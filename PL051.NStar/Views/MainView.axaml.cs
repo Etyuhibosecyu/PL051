@@ -402,6 +402,10 @@ public partial class MainView : UserControl
 				.Filter(x => x.NodeType == XmlNodeType.Element && x.Name == "TestEnvironment")
 				.ConvertAndJoin(x => x.ChildNodes.OfType<XmlText>()
 				.Filter(y => y.NodeType == XmlNodeType.Text))).LastOrDefault();
+			var MinimumFiles = codeStyle.ConvertAndJoin(x => x.ChildNodes.OfType<XmlElement>()
+				.Filter(x => x.NodeType == XmlNodeType.Element && x.Name == "MinimumFiles")
+				.ConvertAndJoin(x => x.ChildNodes.OfType<XmlText>()
+				.Filter(y => y.NodeType == XmlNodeType.Text))).LastOrDefault();
 			if (Enum.TryParse(typeof(RuleStrictness), CharactersInLine?.Value, out var strictness)
 				&& strictness is RuleStrictness CharactersInLineStrictness)
 				CodeStyleRules.CharactersInLineStrictness = CharactersInLineStrictness;
@@ -413,6 +417,8 @@ public partial class MainView : UserControl
 				CodeStyleRules.FunctionsInClassStrictness = FunctionsInClassStrictness;
 			if (bool.TryParse(TestEnvironment?.Value, out var enable))
 				CodeStyleRules.TestEnvironment = enable;
+			if (bool.TryParse(MinimumFiles?.Value, out var minimumFiles))
+				CodeStyleRules.MinimumFiles = minimumFiles;
 		}
 		TextBoxInput.Text = content.Remove(0, settings.Length + prefix.Length).ToString();
 		Execute();
@@ -444,6 +450,7 @@ public partial class MainView : UserControl
 				+ "\t\t\t<LinesInFunction>" + CodeStyleRules.LinesInFunctionStrictness + "</LinesInFunction>\n"
 				+ "\t\t\t<FunctionsInClass>" + CodeStyleRules.FunctionsInClassStrictness + "</FunctionsInClass>\n"
 				+ "\t\t\t<TestEnvironment>" + CodeStyleRules.TestEnvironment + "</TestEnvironment>\n"
+				+ "\t\t\t<MinimumFiles>" + CodeStyleRules.MinimumFiles + "</MinimumFiles>\n"
 				+ "\t\t</CodeStyle>\n\t</Properties>\n</Project>\n"
 				+ TextBoxInput.Text);
 		}

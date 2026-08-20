@@ -13,7 +13,7 @@
   <ItemGroup>
 	<EmbeddedResource Include="**\*.xshd;**\*.resx;" Exclude="bin\**;obj\**;**\*.xproj;packages\**;@(EmbeddedResource)" />
 	<AvaloniaResource Include="**\*.xaml;Assets\*;" Exclude="bin\**;obj\**;**\*.xproj;packages\**;@(EmbeddedResource)" />
-	<PackageReference Include="Avalonia" Version="12.0.1" />
+	<PackageReference Include="Avalonia" Version="12.1.1" />
 	<Compile Update="SR.Designer.cs">
 	  <DesignTime>True</DesignTime>
 	  <AutoGen>True</AutoGen>

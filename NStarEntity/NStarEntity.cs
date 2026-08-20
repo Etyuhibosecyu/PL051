@@ -249,14 +249,14 @@ public struct NStarEntity
 		else if (s[^1] == 'c')
 		{
 			s2 = s[..^1];
-			if (!(s2).All(x => (uint)(x - '0') <= 9 || ".Ee+-".Contains(x)))
+			if (!s2.All(x => (uint)(x - '0') <= 9 || ".Ee+-".Contains(x)))
 				throw new FormatException();
 			return new(new Complex(double.Parse(s2), 0), ComplexType);
 		}
 		else if (s[^1] == 'i')
 		{
 			s2 = s[..^1];
-			if (!(s2).All(x => (uint)(x - '0') <= 9 || ".Ee+-".Contains(x)))
+			if (!s2.All(x => (uint)(x - '0') <= 9 || ".Ee+-".Contains(x)))
 				throw new FormatException();
 			return new(new Complex(0, double.Parse(s2)), ComplexType);
 		}
@@ -351,7 +351,7 @@ public struct NStarEntity
 		else if (s[^1] == 'r')
 		{
 			s2 = s[..^1];
-			if (!(s2).All(x => (uint)(x - '0') <= 9 || ".Ee+-".Contains(x)))
+			if (!s2.All(x => (uint)(x - '0') <= 9 || ".Ee+-".Contains(x)))
 				return false;
 			double n;
 			if (int.TryParse(s2, InvariantCulture, out var i))
@@ -363,7 +363,7 @@ public struct NStarEntity
 		else if (s[^1] == 'm')
 		{
 			s2 = s[..^1];
-			if (!(s2).All(x => (uint)(x - '0') <= 9 || ".Ee+-".Contains(x)))
+			if (!s2.All(x => (uint)(x - '0') <= 9 || ".Ee+-".Contains(x)))
 				return false;
 			decimal n;
 			if (int.TryParse(s2, InvariantCulture, out var i))
@@ -375,7 +375,7 @@ public struct NStarEntity
 		else if (s[^1] == 'c')
 		{
 			s2 = s[..^1];
-			if (!(s2).All(x => (uint)(x - '0') <= 9 || ".Ee+-".Contains(x)))
+			if (!s2.All(x => (uint)(x - '0') <= 9 || ".Ee+-".Contains(x)))
 				return false;
 			if (!double.TryParse(s2, InvariantCulture, out var n))
 				return false;
@@ -384,7 +384,7 @@ public struct NStarEntity
 		else if (s[^1] == 'i')
 		{
 			s2 = s[..^1];
-			if (!(s2).All(x => (uint)(x - '0') <= 9 || ".Ee+-".Contains(x)))
+			if (!s2.All(x => (uint)(x - '0') <= 9 || ".Ee+-".Contains(x)))
 				return false;
 			if (!double.TryParse(s2, InvariantCulture, out var n))
 				return false;

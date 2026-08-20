@@ -19,6 +19,8 @@ public readonly record struct NStarType(BlockStack MainType, BranchCollection Ex
 	public const string LongComplexTypeName = "long complex", LongDeccomplexTypeName = "long deccomplex";
 	public const string RecursiveTypeName = "typename", StringTypeName = "string";
 	public const string TupleName = "tuple";
+	public const string PropertyNameError = "Невозможно транспайлировать программу из-за ошибки в имени свойства."
+		+ " Обратитесь к разработчикам транспайлера.";
 	public static readonly NStarType NullType = GetPrimitiveType(NullString);
 	public static readonly NStarType ObjectType = GetPrimitiveType(ObjectTypeName);
 	public static readonly NStarType BoolType = GetPrimitiveType(BoolTypeName);
@@ -79,7 +81,7 @@ public readonly record struct NStarType(BlockStack MainType, BranchCollection Ex
 		TaskBlockStack, ValueTaskBlockStack, EmptyTaskBlockStack, ValueEmptyTaskBlockStack
 	];
 
-	public NStarType Copy() => new(new(MainType), new(ExtraTypes.Values.Convert(x =>
+	public NStarType Copy() => new(new(MainType), new(ExtraTypes.Convert(x =>
 		new TreeBranch(x.Name.Copy(), x.Pos, x.Container)
 		{
 			Elements = x.Elements.Copy(),
@@ -89,7 +91,7 @@ public readonly record struct NStarType(BlockStack MainType, BranchCollection Ex
 	public static NStarType GetListType(NStarType InnerType)
 	{
 		if (!TypeEqualsToPrimitive(InnerType, "list", false))
-			return new(ListBlockStack, new([new("type", 0, []) { Extra = InnerType }]));
+			return new(ListBlockStack, new([new TreeBranch("type", 0, []) { Extra = InnerType }]));
 		else if (InnerType.ExtraTypes.Length >= 2 && InnerType.ExtraTypes[0].Name != "type"
 			&& int.TryParse(InnerType.ExtraTypes[0].Name.ToString(), out var number))
 			return new(ListBlockStack, new([new((number + 1).ToString(), 0, []), InnerType.ExtraTypes[^1]]));
@@ -133,6 +135,18 @@ public readonly record struct NStarType(BlockStack MainType, BranchCollection Ex
 				return prev.ToString();
 			String result = [];
 			var repeats = 1;
+			if (ExtraTypes.Length == 2 && ExtraTypes[1].Length == 0
+				&& int.TryParse(ExtraTypes[1].Name.AsSpan(), out var tupleLength))
+			{
+				var isList = TypeEqualsToPrimitive(prev, "list", false);
+				if (isList)
+					result.Add('(');
+				result.AddRange(prev.ToString());
+				if (isList)
+					result.Add(')');
+				result.Add('[').AddRange(tupleLength.ToString()).Add(']');
+				return result.ToString();
+			}
 			for (var i = 1; i < ExtraTypes.Length; i++)
 			{
 				if (ExtraTypes[i].Name != "type" || ExtraTypes[i].Extra is not NStarType current)

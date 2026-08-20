@@ -113,6 +113,8 @@ public static class Messages
 			0x203E => $"cannot use the enum \"{parameters[0]}\" before its declaration",
 			0x203F => "the enum cannot be derived from the enum",
 			0x2040 => "the enum must have at least one member",
+			0x2041 => $"the non-singular tuple cannot have more than {parameters[0]} items;"
+				+ " group them into several nested tuples or convert to one type and use singular tuple",
 			0x2048 => "goto is a bad operator, it worsens the organization of the code;" +
 				" PL051 refused from its using intentionally",
 			0x4000 => $"internal compiler error #{parameters[0]}",
@@ -140,8 +142,8 @@ public static class Messages
 				+ parameters[1] + " at position " + parameters[2],
 			0x4013 => $"the variable \"{parameters[0]}\" is already defined in this location" +
 				$" or in the location that contains this in line {parameters[1]} at position " + parameters[2],
-			0x4014 => parameters[0] ?? $"cannot convert from the type \"{parameters[1]}\" to the type \""
-				+ parameters[2] + "\"" + (TypeEqualsToPrimitive(parameters[2], StringTypeName)
+			0x4014 => parameters[0] ?? $"cannot convert from the type \"{parameters[1]}\" to the type \"{parameters[2]}\""
+				+ $" during {parameters[3]}" + (TypeEqualsToPrimitive(parameters[2], StringTypeName)
 				? " - use an addition of zero-length string for this" : ""),
 			0x4015 => $"there is no implicit conversion between the types \"{parameters[0]}\" and \""
 				+ parameters[1] + "\"",
@@ -150,6 +152,8 @@ public static class Messages
 			0x4018 => $"the abstract type \"{parameters[0]}\" can be created via the constructor"
 				+ " but only if you explicitly specify the constructing type (which is not abstract)",
 			0x4019 => "the source for the switch expression must have a finite-range numeric or a string type",
+			0x401A => $"the tuple literal cannot contain more than {parameters[0]} items - use the external storage"
+				+ " (such as the file) for the larger tuples (all the items have been set to null)",
 			0x4020 => $"the function \"{parameters[0]}\" cannot be used in the delegate",
 			0x4021 => $"the function \"{parameters[0]}\" is linked with object instance so it cannot be used in delegate",
 			0x4022 => $"the function \"{parameters[0]}\" must have " + (parameters[1] == parameters[2]
@@ -213,6 +217,7 @@ public static class Messages
 			0x4055 => "too deep constant definition tree",
 			0x4056 => "this expression must be the type but it isn't",
 			0x4057 => "this expression must be constant and implicitly convertible to the \"int\" type",
+			0x4058 => "this expression is constant but it is too large or too small for such using",
 			0x4060 => $"the constructor of the type \"{parameters[0]}\" must have " + (parameters[1] == parameters[2]
 				? parameters[1].ToString() : "from " + parameters[2].ToString() + " to " + parameters[1].ToString())
 				+ " parameters",
@@ -335,6 +340,7 @@ public static class Messages
 			0x9020 => "only one nesting style is allowed without blocks: either a pure depth chain"
 				+ " (nested if/loop/...) or a linear else-if chain - mixing them requires { }",
 			0x9021 => "nested control flow without an enclosing block is not allowed. Add { } around the outer statement",
+			0x9022 => $"the function, constructor or extent cannot have more than {parameters[0]} parameters",
 			0xF000 => "compilation failed because of internal compiler error",
 			0xF010 => $"the NuGet package {parameters[0]} does not exist (see under the \"Settings\" button)",
 			0xF011 => $"the NuGet package {parameters[0]} has the wrong signature (see under the \"Settings\" button)",
