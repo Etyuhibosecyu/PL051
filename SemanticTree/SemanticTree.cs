@@ -181,7 +181,10 @@ public sealed partial class SemanticTree
 				errorOccurred = 1;
 			AddRange(ref errors, innerErrors);
 			compiledClasses = this.compiledClasses;
-			return errorOccurred != 0 ? [] : result;
+			if (errorOccurred != 0)
+				return compiledClasses = [];
+			else
+				return result;
 		}
 		catch (Exception ex) when (ex is not OutOfMemoryException)
 		{
@@ -1729,7 +1732,7 @@ public sealed partial class SemanticTree
 			{
 				branch.Name = value.ToString(true, true);
 				branch.Elements.Clear();
-				branch.Extra ??= value.InnerType;
+				branch.Extra ??= value.Type;
 				return branch.Name.Copy();
 			}
 			if (branch[i].Name == nameof(Hypername) && branch[i].Length != 0
@@ -1773,8 +1776,8 @@ public sealed partial class SemanticTree
 		{
 			if (NStarEntity.TryParse(branchName.ToString(), out var value))
 			{
-				targetBranch.Extra = value.InnerType;
-				extra = new List<object> { (String)nameof(Constant), value.InnerType };
+				targetBranch.Extra = value.Type;
+				extra = new List<object> { (String)nameof(Constant), value.Type };
 				return value.ToString(true, true);
 			}
 			if (TryReadValue(branchName, out value))
@@ -1871,8 +1874,8 @@ public sealed partial class SemanticTree
 				{
 					branchName = branch.Name = value.ToString(true, true);
 					branch.Elements.Clear();
-					branch.Extra = value.InnerType;
-					extra = new List<object> { (String)nameof(Constant), value.InnerType, subbranchValues };
+					branch.Extra = value.Type;
+					extra = new List<object> { (String)nameof(Constant), value.Type, subbranchValues };
 				}
 				else
 				{
@@ -1891,7 +1894,7 @@ public sealed partial class SemanticTree
 				if (!(IsAnyAssignment(branch, out var assignmentBranch, out var assignmentIndex)
 					&& assignmentBranch[assignmentIndex - 1].Extra is NStarType AssignmentNStarType
 					&& TaskBlockStacks.Contains(AssignmentNStarType.MainType)))
-					WrapIntoAsync(branch, result, value.InnerType);
+					WrapIntoAsync(branch, result, value.Type);
 			}
 			else if (IsVariableDeclared(branch, branchName, out var variableErrors, out var innerExtra))
 			{
@@ -2135,10 +2138,9 @@ public sealed partial class SemanticTree
 					&& !branch.Container.StartsWith([.. ContainerNStarType.MainType]))
 					return InaccessibleConstant(ref errors, localConstantsDepth);
 				else if (constant.Value.DefaultValue is not null && constant.Value.DefaultValue.Name == "#value"
-					&& constant.Value.DefaultValue.Extra is String literal && double.TryParse(literal.AsSpan(), out _))
+					&& constant.Value.DefaultValue.Extra is String literal && NStarEntity.TryParse(literal.AsSpan(), out value))
 				{
 					branchName = literal;
-					value = NStarEntity.Parse(literal.ToString());
 					branch.Extra = branch[0].Extra = constant.Value.NStarType;
 					extra = new List<object> { (String)nameof(Constant), branch.Extra, subbranchValues };
 				}
@@ -2149,7 +2151,7 @@ public sealed partial class SemanticTree
 					branchName = Type(ref NStarType, constant.Value.DefaultValue, ref errors).Copy();
 					branchName.Add('.').AddRange(nameof(int.Parse)).Add('(').AddRange(@string.TakeIntoQuotes(true)).Add(')');
 					value = 0;
-					branch.Extra = branch[0].Extra = value.InnerType = NStarType;
+					branch.Extra = branch[0].Extra = value.Type = NStarType;
 					extra = new List<object> { (String)nameof(Constant), branch.Extra };
 				}
 				else if (!(constant.Value.DefaultValue is not null
@@ -2161,30 +2163,30 @@ public sealed partial class SemanticTree
 					constantsDepth = localConstantsDepth;
 					return "_";
 				}
-				else if (!TypesAreCompatible(branch, ref errors, value.InnerType,
+				else if (!TypesAreCompatible(branch, ref errors, value.Type,
 					CreateVar(constant.Value.NStarType, out var NStarType), out var warning,
 					value.ToString(true, true), out var adaptedSource, out var extraMessage)
 					|| warning || adaptedSource is null)
 				{
 					var otherPos = constant.Value.DefaultValue.Pos;
-					GenerateMessage(ref errors, 0x4014, otherPos, extraMessage!, value.InnerType, NStarType, ConstantValue);
+					GenerateMessage(ref errors, 0x4014, otherPos, extraMessage!, value.Type, NStarType, ConstantValue);
 					return "_";
 				}
 				else if (branch.Length == 1)
 				{
 					branchName = adaptedSource;
-					branch.Extra = value.InnerType;
+					branch.Extra = value.Type;
 					extra = new List<object> { (String)nameof(Constant), branch.Extra, subbranchValues };
 				}
 				else
 				{
 					branchName = adaptedSource;
-					branch.Extra = branch[0].Extra = value.InnerType;
+					branch.Extra = branch[0].Extra = value.Type;
 					extra = new List<object> { (String)nameof(Constant), branch.Extra, subbranchValues };
 				}
 				result.AddRange(branchName);
 				constantsDepth = localConstantsDepth;
-				WrapIntoAsync(branch, result, value.InnerType);
+				WrapIntoAsync(branch, result, value.Type);
 			}
 			else if (PropertyExists(ContainerNStarType, PropertyMapping(branchName), Category == "Static", out var property))
 			{
@@ -3964,7 +3966,7 @@ public sealed partial class SemanticTree
 		}
 		if (TryReadValue(branch.Name, out var value))
 		{
-			branch.Extra = value.InnerType;
+			branch.Extra = value.Type;
 			return value.ToString(true, true);
 		}
 		if (branch.Name == nameof(Class))
@@ -4034,7 +4036,7 @@ public sealed partial class SemanticTree
 			}
 			else if (TryReadValue(branch[i].Name, out value))
 			{
-				branch[i].Extra = value.InnerType;
+				branch[i].Extra = value.Type;
 				subbranchValues.SetOrAdd(i, value.ToString(true, true));
 				continue;
 			}
@@ -4143,33 +4145,33 @@ public sealed partial class SemanticTree
 		{
 			case "+":
 			result = +source;
-			branch[i].Name = result.InnerType.Equals(ComplexType) ? result.ToString(true, true) : result.ToString(true);
+			branch[i].Name = result.Type.Equals(ComplexType) ? result.ToString(true, true) : result.ToString(true);
 			if (branch[0].Name.Length != 0
 				&& (branch[0].Name[^1] is 'r' or 'c' or 'i' && double.TryParse(branch[i].Name.ToString(), out _)
 				|| branch[0].Name[^1] == 'm' && decimal.TryParse(branch[i].Name.ToString(), out _)))
 				branch[i].Name.Add(branch[0].Name[^1]);
-			branch[i].Extra = result.InnerType;
+			branch[i].Extra = result.Type;
 			return result.ToString(true, true);
 			case "-":
 			result = -source;
-			branch[i].Name = result.InnerType.Equals(ComplexType) ? result.ToString(true, true)
+			branch[i].Name = result.Type.Equals(ComplexType) ? result.ToString(true, true)
 				: result.ToString(true).AddRange(branch[0].Name.Length != 0
 				&& branch[0].Name[^1] is 'r' or 'm' or 'c' or 'i' ? branch[0].Name[^1] : []);
 			if (branch[0].Name.Length != 0
 				&& (branch[0].Name[^1] is 'r' or 'c' or 'i' && double.TryParse(branch[i].Name.ToString(), out _)
 				|| branch[0].Name[^1] == 'm' && decimal.TryParse(branch[i].Name.ToString(), out _)))
 				branch[i].Name.Add(branch[0].Name[^1]);
-			branch[i].Extra = result.InnerType;
+			branch[i].Extra = result.Type;
 			return result.ToString(true, true);
 			case "!":
 			result = !source;
 			branch[i].Name = result.ToString(true);
-			branch[i].Extra = result.InnerType;
+			branch[i].Extra = result.Type;
 			return result.ToString(true, true);
 			case "~":
 			result = ~source;
 			branch[i].Name = result.ToString(true);
-			branch[i].Extra = result.InnerType;
+			branch[i].Extra = result.Type;
 			return result.ToString(true, true);
 			case "sin":
 			realValue = source.ToReal();
@@ -4183,7 +4185,7 @@ public sealed partial class SemanticTree
 			{
 				result = Sin(realValue);
 				branch[i].Name = result.ToString(true);
-				branch[i].Extra = result.InnerType;
+				branch[i].Extra = result.Type;
 				return result.ToString(true, true);
 			}
 			catch
@@ -4204,7 +4206,7 @@ public sealed partial class SemanticTree
 			{
 				result = Cos(realValue);
 				branch[i].Name = result.ToString(true);
-				branch[i].Extra = result.InnerType;
+				branch[i].Extra = result.Type;
 				return result.ToString(true, true);
 			}
 			catch
@@ -4225,7 +4227,7 @@ public sealed partial class SemanticTree
 			{
 				result = Tan(realValue);
 				branch[i].Name = result.ToString(true);
-				branch[i].Extra = result.InnerType;
+				branch[i].Extra = result.Type;
 				return result.ToString(true, true);
 			}
 			catch
@@ -4246,7 +4248,7 @@ public sealed partial class SemanticTree
 			{
 				result = Asin(realValue);
 				branch[i].Name = result.ToString(true);
-				branch[i].Extra = result.InnerType;
+				branch[i].Extra = result.Type;
 				return result.ToString(true, true);
 			}
 			catch
@@ -4267,7 +4269,7 @@ public sealed partial class SemanticTree
 			{
 				result = Acos(realValue);
 				branch[i].Name = result.ToString(true);
-				branch[i].Extra = result.InnerType;
+				branch[i].Extra = result.Type;
 				return result.ToString(true, true);
 			}
 			catch
@@ -4288,7 +4290,7 @@ public sealed partial class SemanticTree
 			{
 				result = Atan(realValue);
 				branch[i].Name = result.ToString(true);
-				branch[i].Extra = result.InnerType;
+				branch[i].Extra = result.Type;
 				return result.ToString(true, true);
 			}
 			catch
@@ -4309,7 +4311,7 @@ public sealed partial class SemanticTree
 			{
 				result = Log(realValue);
 				branch[i].Name = result.ToString(true);
-				branch[i].Extra = result.InnerType;
+				branch[i].Extra = result.Type;
 				return result.ToString(true, true);
 			}
 			catch
@@ -4319,7 +4321,7 @@ public sealed partial class SemanticTree
 				return DefaultNull;
 			}
 			case "postfix !":
-			var unsignedIntValue = source.ToUnsignedInt();
+			var unsignedIntValue = (uint)source.ToNumber();
 			if (source != 0 && unsignedIntValue != source)
 			{
 				GenerateMessage(ref errors, 0x4003, otherPos);
@@ -4330,7 +4332,7 @@ public sealed partial class SemanticTree
 			{
 				result = Factorial(unsignedIntValue);
 				branch[i].Name = result.ToString(true);
-				branch[i].Extra = result.InnerType;
+				branch[i].Extra = result.Type;
 				return result.ToString(true, true);
 			}
 			catch
@@ -4340,7 +4342,7 @@ public sealed partial class SemanticTree
 				return DefaultNull;
 			}
 			case "not":
-			branch[i].Extra = source.InnerType;
+			branch[i].Extra = source.Type;
 			return ((String)"(").AddRange(branch[i].Name).Add(' ')
 				.AddRange(source == new NStarEntity() ? NullString : source.ToString(true, true)).Add(')');
 			case ">=" or "<=" or ">" or "<":
@@ -4351,7 +4353,7 @@ public sealed partial class SemanticTree
 				branch[i].Name = NullString;
 				return "not object";
 			}
-			branch[i].Extra = source.InnerType;
+			branch[i].Extra = source.Type;
 			return ((String)"(").AddRange(branch[i].Name).Add(' ').AddRange(source.ToString(true, true)).Add(')');
 			case "++" or "--" or "!!":
 				{
@@ -4405,7 +4407,7 @@ public sealed partial class SemanticTree
 		return branch[i].Name.ToString() switch
 		{
 			"+" => valueString.Insert(0, "(+(").AddRange("))"),
-			"-" => valueString.Insert(0, "(-(").AddRange("))"),
+			"-" => valueString.Insert(0, NStarType.Equals(UnsignedLongIntType) ? "(-(MpzT)(" : "(-(").AddRange("))"),
 			"!" => valueString.Insert(0, "(!(").AddRange("))"),
 			"~" => valueString.Insert(0, "(~(").AddRange("))"),
 			"^" => valueString.Insert(0, "^(").Add(')'),
@@ -4585,7 +4587,7 @@ public sealed partial class SemanticTree
 			TryReadValue(branch[i - 1].Name, out var value) ? value : 5, RightNStarType.MainType.Peek().Name))
 			: (branch[i].Name == "%" && TypeIsPrimitive(LeftNStarType.MainType) && TypeIsPrimitive(RightNStarType.MainType))
 			? GetPrimitiveType(NStarEntity.GetRemainderType(LeftNStarType.MainType.Peek().Name,
-			TryReadValue(branch[i - 1].Name, out value) ? value : new(12345678901234567890, UnsignedLongIntType),
+			TryReadValue(branch[i - 1].Name, out value) ? value : 12345678901234567890,
 			RightNStarType.MainType.Peek().Name))
 			: GetResultType(LeftNStarType, RightNStarType, subbranchValues[^2], subbranchValues[^1]);
 		String @default = DefaultConst;
@@ -5447,7 +5449,7 @@ public sealed partial class SemanticTree
 				result.AddRange(", ");
 			if (TryReadValue(branch[i].Name, out var value))
 			{
-				branch[i].Extra = value.InnerType;
+				branch[i].Extra = value.Type;
 				listItemValues.Add(value.ToString(true, true));
 				result.AddRange(listItemValues[^1]);
 			}
@@ -5492,7 +5494,7 @@ public sealed partial class SemanticTree
 				result.AddRange(", ");
 			if (TryReadValue(branch[i].Name, out var value))
 			{
-				if (!TypesAreCompatible(branch, ref errors, value.InnerType, BoolType, out var warning, value.ToString(true, true),
+				if (!TypesAreCompatible(branch, ref errors, value.Type, BoolType, out var warning, value.ToString(true, true),
 					out var destExpr, out _) || warning || destExpr is null)
 				{
 					var otherPos = branch[i].Pos;
@@ -5500,7 +5502,7 @@ public sealed partial class SemanticTree
 					branch.Extra = NullType;
 					return DefaultNull;
 				}
-				branch[i].Extra = value.InnerType;
+				branch[i].Extra = value.Type;
 				result.AddRange(destExpr);
 			}
 			else
@@ -5923,7 +5925,7 @@ public sealed partial class SemanticTree
 		}
 		if (TryReadValue(parseResult, out var value) || TryReadValue(branch[0].Name, out value))
 		{
-			var InnerNStarType = value.InnerType;
+			var InnerNStarType = value.Type;
 			return ((String)OpeningTypeof).AddRange(Type(ref InnerNStarType, branch, ref errors)).Add(')');
 		}
 		return parseResult.Insert(0, '(').AddRange(").GetType()");
@@ -5984,7 +5986,7 @@ public sealed partial class SemanticTree
 			return DefaultNull;
 		if (NStarEntity.TryParse(branch.Name.ToString(), out var value))
 		{
-			branch.Extra = value.InnerType;
+			branch.Extra = value.Type;
 			return value.ToString(true, true);
 		}
 		if (branch.Length == 0)
@@ -7897,7 +7899,7 @@ public static async Task<dynamic?> F(params dynamic?[] args)
 			return true;
 		if (DateTime.TryParse(s.ToString(), CultureInfo.InvariantCulture, out var time))
 		{
-			value = new(time, GetPrimitiveType(nameof(DateTime)));
+			value = time;
 			return true;
 		}
 		return false;

@@ -1570,14 +1570,14 @@ public partial class MainParsing : LexemStream
 			containerConstants.Add(name, new(NStarType, attributes, new(value.ToString(true),
 				treeBranch.Pos, treeBranch.Container)
 			{
-				Extra = value.InnerType
+				Extra = value.Type
 			}));
 		else if (treeBranch.Name == "Expr" && treeBranch.Length == 1 && treeBranch[0].Length == 0
 			&& NStarEntity.TryParse(treeBranch[0].Name.ToString(), out value))
 			containerConstants.Add(name, new(NStarType, attributes, new(value.ToString(true),
 				treeBranch.Pos, treeBranch.Container)
 			{
-				Extra = value.InnerType
+				Extra = value.Type
 			}));
 		else
 			containerConstants.Add(name, new(NStarType, attributes, treeBranch));
@@ -4643,7 +4643,7 @@ public partial class MainParsing : LexemStream
 		if (collectionTypes[^1] == TupleName && TypeEqualsToPrimitive(InnerNStarType, TupleName, false)
 			&& InnerNStarType.ExtraTypes.Length == 2 && InnerNStarType.ExtraTypes[1].Name != "type"
 			&& int.TryParse(InnerNStarType.ExtraTypes[1].Name.ToString(), out _))
-			types.AddRange(InnerNStarType.ExtraTypes);
+			types.Add(branch);
 		else if (itemName != [])
 		{
 			if (!types.TryAdd(itemName, branch))
@@ -4725,10 +4725,26 @@ public partial class MainParsing : LexemStream
 				GenerateMessage(0x8004, pos, false);
 			else if (number >= 2)
 			{
+				if (!TryGetSingularTupleSizeLimit(NStarType, out var limit))
+				{
+					_ExtraStack[_Stackpos - 1] = NullType;
+					_TBStack[_Stackpos] = new("type", pos, container) { Extra = NullType };
+					GenerateMessage(0x2043, pos, false, NStarType);
+					CloseBracket(ref pos, ClosingSquare, ref errors, false, end);
+					return Default();
+				}
+				else if (number > limit)
+				{
+					_ExtraStack[_Stackpos - 1] = NullType;
+					_TBStack[_Stackpos] = new("type", pos, container) { Extra = NullType };
+					GenerateMessage(0x2042, pos, false, NStarType, limit);
+					CloseBracket(ref pos, ClosingSquare, ref errors, false, end);
+					return Default();
+				}
 				var inlineArrayNumber = NStarType.Equals(BoolType) ? ~number : number;
 				NStarType = new(TupleBlockStack,
-					new([new TreeBranch("type", pos - 1, container) { Extra = NStarType },
-					new(number.ToString(), pos - 1, container)]));
+					new([new TreeBranch("type", pos, container) { Extra = NStarType },
+					new(number.ToString(), pos, container)]));
 				if (!InlineArrays.TryGetValue(inlineArrayNumber, out _))
 					InlineArrays.Add(inlineArrayNumber, (new(RandomVarName()), false));
 			}
@@ -4873,7 +4889,7 @@ public partial class MainParsing : LexemStream
 	{
 		var s = lexems[pos].String;
 		if (lexems[pos].Type == LexemType.Keyword && BasicExprKeywords.Contains(s.ToString())
-			|| lexems[pos].Type == LexemType.Operator && BasicExprOperators.Contains(s.ToString()))
+			|| lexems[pos].Type == LexemType.Identifier && BasicExprOperators.Contains(s.ToString()))
 		{
 			pos++;
 			_TBStack[_Stackpos] = new(s, pos - 1, pos, container)

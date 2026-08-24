@@ -30,6 +30,7 @@ using NuGet.Configuration;
 using NuGet.Packaging;
 using NuGet.Protocol.Core.Types;
 using ReactiveUI;
+using RedStarMath;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.IO;
@@ -157,11 +158,13 @@ public static class BuiltInMemberCollections
 		{ ByteTypeName, typeof(byte) }, { ShortCharTypeName, typeof(byte) },
 		{ ShortIntTypeName, typeof(short) }, { UnsignedShortIntTypeName, typeof(ushort) },
 		{ CharTypeName, typeof(char) }, { IntTypeName, typeof(int) }, { UnsignedIntTypeName, typeof(uint) },
-		{ LongCharTypeName, typeof(uint) }, { LongIntTypeName, typeof(long) },
-		{ nameof(DateTime), typeof(DateTime) }, { nameof(TimeSpan), typeof(TimeSpan) },
-		{ UnsignedLongIntTypeName, typeof(long) }, { RealTypeName, typeof(double) },
+		{ LongCharTypeName, typeof(uint) }, { LongIntTypeName, typeof(long) }, { UnsignedLongIntTypeName, typeof(ulong) },
 		{ LongLongTypeName, typeof(MpzT) }, { UnsignedLongLongTypeName, typeof(MpuT) },
-		{ DecimalTypeName, typeof(decimal) }, { ComplexTypeName, typeof(RedStarMath.Complex) },
+		{ nameof(DateTime), typeof(DateTime) }, { nameof(TimeSpan), typeof(TimeSpan) },
+		{ RealTypeName, typeof(double) }, { DecimalTypeName, typeof(decimal) },
+		{ UnsignedLongRealTypeName, typeof(UnsignedLongReal) }, { UnsignedLongDecimalTypeName, typeof(UnsignedLongDecimal) },
+		{ LongRealTypeName, typeof(LongReal) }, { LongDecimalTypeName, typeof(LongDecimal) },
+		{ ComplexTypeName, typeof(RedStarMath.Complex) },
 		{ RecursiveTypeName, typeof(Type) }, { StringTypeName, typeof(String) },
 		{ "index", typeof(Index) }, { "range", typeof(Range) },
 		{ "nint", typeof(nint) }, { "list", typeof(List<>) }, { "dynamic", typeof(void) }, { "var", typeof(void) },

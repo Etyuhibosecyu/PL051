@@ -2,9 +2,13 @@
 global using NStar.Linq;
 global using System;
 global using System.Diagnostics.CodeAnalysis;
+global using static NStar.Core.Extents;
 global using static PL051.NStar.BuiltInMemberCollections;
 global using static PL051.NStar.NStarType;
 global using String = NStar.Core.String;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace PL051.NStar;
 
@@ -61,6 +65,43 @@ public static class TypeChecks
 			&& TypeIsPrimitive(a.NStarType.MainType) && a.NStarType.MainType.Peek().Name == RecursiveTypeName
 			&& a.NStarType.ExtraTypes.Length == 0;
 	}
+
+	public static int GetTypeSize(Type type, int depth = 1)
+	{
+		if (depth > 10)
+			return -1;
+		if (type.IsPrimitive || type.IsEnum)
+			return (int?)typeof(Marshal).GetMethod(nameof(Marshal.SizeOf), BindingFlags.Static | BindingFlags.Public, [])
+				?.MakeGenericMethod([type])?.Invoke(null, []) ?? throw new InvalidOperationException(PropertyNameError);
+		if (type.IsClass)
+			return 8;
+		long total = 0;
+		var fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+		if (fields.Length == 1 && type.GetCustomAttribute<InlineArrayAttribute>() is InlineArrayAttribute attribute)
+		{
+			var length = type.GetGenericArguments().Length == 0
+				? (int?)type.GetField("_size", BindingFlags.Static | BindingFlags.NonPublic)?.GetValue(null)
+				?? throw new InvalidOperationException(PropertyNameError) : attribute.Length;
+			if (fields[0].FieldType == typeof(bool))
+				total = GetArrayLength(length, 32) * 4;
+			else
+				total = (long)GetTypeSize(fields[0].FieldType) * length;
+			if (total > int.MaxValue)
+				return -1;
+			return (int)total;
+		}
+		foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+		{
+			var fieldSize = GetTypeSize(field.FieldType, depth + 1);
+			if (fieldSize < 0)
+				return -1; // Неизвестный размер внутри
+			total += fieldSize;
+		}
+		if (total > int.MaxValue)
+			return -1;
+		return (int)total;
+	}
+
 
 	public static bool IsEqualOrDerived(NStarType derived, NStarType @base)
 	{
@@ -282,6 +323,101 @@ public static class TypeChecks
 
 	public static bool IsReservedMember(BlockStack type, String member) => ReservedMembers.TryGetValue(type, out var containerMembers)
 			&& containerMembers.Contains(member);
+
+	public static bool TryGetSingularTupleSizeLimit(NStarType type, [MaybeNullWhen(false)] out int limit)
+	{
+		if (type.Equals(BoolType))
+		{
+			limit = 1000_000_000;
+			return true;
+		}
+		else if (TryGetTypeSize(type, out var size))
+		{
+			limit = 128_000_000 / size;
+			return true;
+		}
+		else
+		{
+			limit = -1;
+			return false;
+		}
+	}
+
+	public static bool TryGetTypeSize(NStarType type, [MaybeNullWhen(false)] out int size)
+	{
+		if (!type.MainType.TryPeek(out var block))
+		{
+			size = default;
+			return false;
+		}
+		else if (block.BlockType == BlockType.Class
+			&& UserDefinedTypes.TryGetValue(SplitType(type.MainType), out var userDefinedType)
+			&& (userDefinedType.Attributes & TypeAttributes.Delegate)
+			is 0 or TypeAttributes.Sealed or TypeAttributes.Abstract or TypeAttributes.Static)
+		{
+			size = 8;
+			return true;
+		}
+		else if (block.BlockType == BlockType.Enum
+			&& UserDefinedTypes.TryGetValue(SplitType(type.MainType), out userDefinedType)
+			&& !userDefinedType.BaseType.Equals(NullType))
+			return TryGetTypeSize(userDefinedType.BaseType, out size);
+		else if (block.BlockType != BlockType.Primitive)
+		{
+			if (TypeExists(SplitType(type.MainType), out var netType) && GetTypeSize(netType) is var netSize && netSize > 0)
+			{
+				size = netSize;
+				return true;
+			}
+			else
+			{
+				size = default;
+				return false;
+			}
+		}
+		else if (block.Name == "list")
+		{
+			size = 8;
+			return true;
+		}
+		else if (block.Name != TupleName)
+		{
+			size = block.Name.AsSpan() switch
+			{
+				BoolTypeName or ByteTypeName or ShortCharTypeName => 1,
+				ShortIntTypeName or UnsignedShortIntTypeName or CharTypeName => 2,
+				IntTypeName or UnsignedIntTypeName or LongCharTypeName or "index" => 4,
+				LongIntTypeName or nameof(DateTime) or nameof(TimeSpan) or UnsignedLongIntTypeName
+					or RealTypeName or LongLongTypeName or UnsignedLongLongTypeName
+					or RecursiveTypeName or StringTypeName or "range" => 8,
+				DecimalTypeName or ComplexTypeName => 16,
+				_ => default,
+			};
+			return size != default;
+		}
+		else if (type.ExtraTypes.Length == 2
+			&& type.ExtraTypes[0].Name == "type" && type.ExtraTypes[0].Extra is NStarType ItemNStarType
+			&& type.ExtraTypes[1].Length == 0 && int.TryParse(type.ExtraTypes[1].Name.AsSpan(), out var number)
+			&& TryGetTypeSize(ItemNStarType, out var itemSize))
+		{
+			size = itemSize * number;
+			if (ItemNStarType.Equals(BoolType))
+				size = GetArrayLength(size, 4) * 4;
+			return size != default;
+		}
+		else
+		{
+			size = 0;
+			foreach (var item in type.ExtraTypes)
+			{
+				if (item.Name == "type" && item.Extra is NStarType NStarType && TryGetTypeSize(NStarType, out itemSize))
+					size += itemSize;
+				else
+					size += 128;
+			}
+			return true;
+		}
+	}
 
 	public static bool TypeExists((BlockStack Container, String Type) containerType, [MaybeNullWhen(false)] out Type netType)
 	{

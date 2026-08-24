@@ -25,6 +25,7 @@ public enum LexemType
 	LongLong,
 	UnsignedLongLong,
 	Decimal,
+	OtherNumber,
 	String,
 	Other,
 }
@@ -197,7 +198,7 @@ public class CodeSample(String newString)
 					AddLexem(s, s, LexemType.Keyword, s.Length);
 				}
 				else if (s.AsSpan() is "and" or "or" or "xor" or "is" or "typeof" or "sin" or "cos" or "tan"
-					or "asin" or "acos" or "atan" or "ln" or "Infty" or "Uncty" or "CombineWith" or "CloseOnReturnWith")
+					or "asin" or "acos" or "atan" or "ln" or "CombineWith" or "CloseOnReturnWith")
 					AddOperatorLexem(s);
 				else if (s.AsSpan() is "pow" or "tetra" or "penta" or "hexa")
 				{
@@ -233,7 +234,7 @@ public class CodeSample(String newString)
 			{
 				l += s3.Length + 1;
 				s = input.GetRange(pos - l, l);
-				AddOperatorLexem(s);
+				AddLexem(s, s, LexemType.Identifier, s.Length);
 				return (true, false, default);
 			}
 			else
@@ -486,31 +487,37 @@ public class CodeSample(String newString)
 		{
 			if (ValidateChar('L'))
 			{
-				numberParts.Add("L");
-				if (ValidateChar('L'))
+				if (!ValidateLong(out lexemType))
 				{
-					lexemType = LexemType.LongLong;
-					numberParts[^1].Add('L');
+					s2 = input[start..pos];
+					return NullString;
 				}
-				else
-					lexemType = LexemType.LongInt;
 			}
 			else if (ValidateChar('u'))
 			{
-				numberParts.Add("u");
-				if (ValidateChar('L'))
+				if (!ValidateUnsigned(out lexemType))
 				{
-					lexemType = LexemType.UnsignedLongInt;
-					numberParts[^1].Add('L');
+					s2 = input[start..pos];
+					return NullString;
 				}
-				else
-					lexemType = LexemType.UnsignedInt;
+			}
+			else if (ValidateChar('n'))
+			{
+				numberParts.Add("n");
+				if (!int.TryParse(numberParts[0].AsSpan(), out _))
+				{
+					GenerateMessage(0x0018, start, int.MinValue, int.MaxValue);
+					lexemType = LexemType.Keyword;
+					s2 = input[start..pos];
+					return NullString;
+				}
+				lexemType = LexemType.Int;
 			}
 			else if (ValidateChar('r'))
 			{
-				if (lexemType == LexemType.LongLong)
+				if (!double.TryParse(numberParts[0].AsSpan(), out _))
 				{
-					GenerateMessage(0x0001, start);
+					GenerateMessage(0x0018, start, "±4.940656E-324", "±1.797693E+308");
 					lexemType = LexemType.Keyword;
 					s2 = input[start..pos];
 					return NullString;
@@ -520,14 +527,14 @@ public class CodeSample(String newString)
 			}
 			else if (ValidateChar('m'))
 			{
-				if (lexemType == LexemType.LongLong)
+				if (!decimal.TryParse(numberParts[0].AsSpan(), out _))
 				{
-					GenerateMessage(0x0001, start);
+					GenerateMessage(0x0018, start, "±1.0E-28", "±7.922816E+28");
 					lexemType = LexemType.Keyword;
 					s2 = input[start..pos];
 					return NullString;
 				}
-				lexemType = LexemType.Real;
+				lexemType = LexemType.Decimal;
 				numberParts.Add("m");
 			}
 			else if (ValidateChar('c'))
@@ -574,6 +581,91 @@ public class CodeSample(String newString)
 			}
 			else
 				return null;
+		}
+		bool ValidateLong(out LexemType lexemType)
+		{
+			numberParts.Add("L");
+			if (ValidateChar('L'))
+			{
+				if (!MpzT.TryParse(numberParts[0].AsSpan(), out _))
+				{
+					GenerateMessage(0x0019, start);
+					lexemType = LexemType.Keyword;
+					return false;
+				}
+				lexemType = LexemType.LongLong;
+				numberParts[^1].Add('L');
+				return true;
+			}
+			else if (ValidateChar('r'))
+			{
+				lexemType = LexemType.OtherNumber;
+				numberParts[^1].Add('r');
+				return true;
+			}
+			else if (ValidateChar('m'))
+			{
+				lexemType = LexemType.OtherNumber;
+				numberParts[^1].Add('m');
+				return true;
+			}
+			else if (!long.TryParse(numberParts[0].AsSpan(), out _))
+			{
+				GenerateMessage(0x0018, start, long.MinValue, long.MaxValue);
+				lexemType = LexemType.Keyword;
+				return false;
+			}
+			else
+			{
+				lexemType = LexemType.LongInt;
+				return true;
+			}
+		}
+		bool ValidateUnsigned(out LexemType lexemType)
+		{
+			numberParts.Add("u");
+			if (!ValidateChar('L'))
+			{
+				if (!uint.TryParse(numberParts[0].AsSpan(), out _))
+				{
+					GenerateMessage(0x0018, start, uint.MinValue, uint.MaxValue);
+					lexemType = LexemType.Keyword;
+					return false;
+				}
+				lexemType = LexemType.UnsignedInt;
+				return true;
+			}
+			numberParts[^1].Add('L');
+			if (!ValidateChar('L'))
+			{
+				if (ValidateChar('r'))
+				{
+					lexemType = LexemType.OtherNumber;
+					numberParts[^1].Add('r');
+				}
+				else if (ValidateChar('m'))
+				{
+					lexemType = LexemType.OtherNumber;
+					numberParts[^1].Add('m');
+				}
+				else if (!ulong.TryParse(numberParts[0].AsSpan(), out _))
+				{
+					GenerateMessage(0x0018, start, ulong.MinValue, ulong.MaxValue);
+					lexemType = LexemType.Keyword;
+					return false;
+				}
+				lexemType = LexemType.UnsignedLongInt;
+				return true;
+			}
+			else if (!MpuT.TryParse(numberParts[0].AsSpan(), out _))
+			{
+				GenerateMessage(0x0019, start);
+				lexemType = LexemType.Keyword;
+				return false;
+			}
+			numberParts[^1].Add('L');
+			lexemType = LexemType.UnsignedLongLong;
+			return true;
 		}
 	}
 

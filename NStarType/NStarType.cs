@@ -14,6 +14,7 @@ public readonly record struct NStarType(BlockStack MainType, BranchCollection Ex
 	public const string LongLongTypeName = "long long", UnsignedLongLongTypeName = "unsigned long long";
 	public const string ShortCharTypeName = "short char", LongCharTypeName = "long char";
 	public const string RealTypeName = "real", DecimalTypeName = "decimal";
+	public const string UnsignedLongRealTypeName = "unsigned long real", UnsignedLongDecimalTypeName = "unsigned long decimal";
 	public const string LongRealTypeName = "long real", LongDecimalTypeName = "long decimal";
 	public const string ComplexTypeName = "complex", DeccomplexTypeName = "deccomplex";
 	public const string LongComplexTypeName = "long complex", LongDeccomplexTypeName = "long deccomplex";
@@ -34,11 +35,18 @@ public readonly record struct NStarType(BlockStack MainType, BranchCollection Ex
 	public static readonly NStarType DateTimeType = GetPrimitiveType(nameof(DateTime));
 	public static readonly NStarType TimeSpanType = GetPrimitiveType(nameof(TimeSpan));
 	public static readonly NStarType UnsignedLongIntType = GetPrimitiveType(UnsignedLongIntTypeName);
-	public static readonly NStarType RealType = GetPrimitiveType(RealTypeName);
-	public static readonly NStarType DecimalType = GetPrimitiveType(DecimalTypeName);
 	public static readonly NStarType LongLongType = GetPrimitiveType(LongLongTypeName);
 	public static readonly NStarType UnsignedLongLongType = GetPrimitiveType(UnsignedLongLongTypeName);
+	public static readonly NStarType RealType = GetPrimitiveType(RealTypeName);
+	public static readonly NStarType DecimalType = GetPrimitiveType(DecimalTypeName);
+	public static readonly NStarType UnsignedLongRealType = GetPrimitiveType(UnsignedLongRealTypeName);
+	public static readonly NStarType UnsignedLongDecimalType = GetPrimitiveType(UnsignedLongDecimalTypeName);
+	public static readonly NStarType LongRealType = GetPrimitiveType(LongRealTypeName);
+	public static readonly NStarType LongDecimalType = GetPrimitiveType(LongDecimalTypeName);
 	public static readonly NStarType ComplexType = GetPrimitiveType(ComplexTypeName);
+	public static readonly NStarType DeccomplexType = GetPrimitiveType(DeccomplexTypeName);
+	public static readonly NStarType LongComplexType = GetPrimitiveType(LongComplexTypeName);
+	public static readonly NStarType LongDeccomplexType = GetPrimitiveType(LongDeccomplexTypeName);
 	public static readonly NStarType RecursiveType = GetPrimitiveType(RecursiveTypeName);
 	public static readonly NStarType StringType = GetPrimitiveType(StringTypeName);
 	public static readonly NStarType IndexType = GetPrimitiveType("index");

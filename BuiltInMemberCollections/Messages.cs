@@ -41,6 +41,9 @@ public static class Messages
 			0x0015 => "end of the line must follow the record declaration",
 			0x0016 => "the struct declaration cannot contain the keywords \"abstract\", \"sealed\" or \"static\"",
 			0x0017 => "the struct members cannot be abstract",
+			0x0018 => "to large or too small literal for this type suffix;"
+				+ $" there is allowed from {parameters[0]} to {parameters[1]}",
+			0x0019 => "the wrong literal for this type suffix; there are allowed only the integer numbers",
 			0x2000 => "unexpected end of code reached",
 			0x2001 => "expected: identifier",
 			0x2002 => "expected: end of the line",
@@ -115,6 +118,9 @@ public static class Messages
 			0x2040 => "the enum must have at least one member",
 			0x2041 => $"the non-singular tuple cannot have more than {parameters[0]} items;"
 				+ " group them into several nested tuples or convert to one type and use singular tuple",
+			0x2042 => $"the singular tuple of type {parameters[0]} cannot have more than {parameters[1]} items;"
+				+ " use the list for more ones",
+			0x2043 => $"the singular tuple of type {parameters[0]} is under development; use the list for that type",
 			0x2048 => "goto is a bad operator, it worsens the organization of the code;" +
 				" PL051 refused from its using intentionally",
 			0x4000 => $"internal compiler error #{parameters[0]}",

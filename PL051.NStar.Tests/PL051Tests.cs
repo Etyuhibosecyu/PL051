@@ -5494,6 +5494,79 @@ return list.ConvertAndJoin[bool[3], bool](x => x.ToList())
 bools[99999999] = true
 return bools[^2]
 ", "true", "Ошибок нет")]
+	[DataRow(@"bool[1500_000_000] bools
+int[100_000_000] ints
+decimal[10_000_000] decimals
+(bool[1000_000])[1000_000] bools2
+(byte, byte)[50_000_000] bytes
+(bool, bool)[50_000_000] items
+([string, int])[10_000_000] dics
+([string, int])[25_000_000] dics2
+(System.Func[string, int])[5_000_000] funcs
+(int[100_000], bool)[1000_000] items2
+(int[1000], System.Collections.Chain)[1000_000] items3
+System.Collections.Chain[10_000_000] chains
+System.Collections.Chain[100_000_000] chains2
+Struct MyStruct
+{
+	int[10] Items
+}
+(MyStruct[])[10] structs
+", NullString, @"Error 2042 in line 1 at position 5: the singular tuple of type bool cannot have more than 1000000000 items; use the list for more ones
+Error 2042 in line 2 at position 4: the singular tuple of type int cannot have more than 32000000 items; use the list for more ones
+Error 2042 in line 3 at position 8: the singular tuple of type decimal cannot have more than 8000000 items; use the list for more ones
+Error 2042 in line 4 at position 17: the singular tuple of type bool[1000000] cannot have more than 128 items; use the list for more ones
+Error 2042 in line 6 at position 13: the singular tuple of type bool[2] cannot have more than 32000000 items; use the list for more ones
+Error 2042 in line 8 at position 16: the singular tuple of type System.Collections.Dictionary[string, int] cannot have more than 16000000 items; use the list for more ones
+Error 2042 in line 10 at position 21: the singular tuple of type (int[100000], bool) cannot have more than 319 items; use the list for more ones
+Error 2042 in line 11 at position 38: the singular tuple of type (int[1000], System.Collections.Chain) cannot have more than 31936 items; use the list for more ones
+Error 2042 in line 13 at position 25: the singular tuple of type System.Collections.Chain cannot have more than 16000000 items; use the list for more ones
+Error 2043 in line 18 at position 13: the singular tuple of type MyStruct[(List :: list() typename)] is under development; use the list for that type
+")]
+	[DataRow(@"var a = 1234567890n
+var b = typeof(a)
+var c = 1uLL
+var d = typeof(c)
+return (a, b, c, d)
+", "(1234567890, int, 1, unsigned long long)", "Ошибок нет")]
+	[DataRow(@"var number = 12_345_678_901_234_567_890
+var y = typeof(number % 256)
+var y2 = typeof(number / 100_000_000_000_000_000)
+var si = typeof(-(-number) % 32_768)
+var usi = typeof(number % 65_536)
+var usi2 = typeof(number / 300_000_000_000_000)
+var i = typeof(-(-number) % 2_147_483_648)
+var ui = typeof(number % 4_294_967_296)
+var ui2 = typeof(number / 4_294_967_296)
+var li = typeof(-(-number) % 9_223_372_036_854_775_808)
+return (y, y2, si, usi, usi2, i, ui, ui2, li)
+", "(byte, byte, short int, unsigned short int, unsigned short int, int, unsigned int, unsigned int, long int)", "Ошибок нет")]
+	[DataRow(@"var a = 2345678901n
+var b = 12345678901u
+var c = 12345678901234567890L
+var d = 23456789012345678901uL
+", NullString, @"Error 0018 in line 1 at position 8: to large or too small literal for this type suffix; there is allowed from -2147483648 to 2147483647
+Error 0018 in line 2 at position 8: to large or too small literal for this type suffix; there is allowed from 0 to 4294967295
+Error 0018 in line 3 at position 8: to large or too small literal for this type suffix; there is allowed from -9223372036854775808 to 9223372036854775807
+Error 0018 in line 4 at position 8: to large or too small literal for this type suffix; there is allowed from 0 to 18446744073709551615
+")]
+	[DataRow(@"var si = -12345
+var i = -1234567890
+var li = -123456789012345
+var ll = -1234567890123456789012345
+var items = (si.ToUnsigned(), i.ToUnsigned(), li.ToUnsigned(), ll.ToUnsigned())
+var types = (typeof(si.ToUnsigned()), typeof(i.ToUnsigned()), typeof(li.ToUnsigned()), typeof(ll.ToUnsigned()))
+return (items, types)
+", "((12345, 1234567890, 123456789012345, 1234567890123456789012345),"
+		+ " (unsigned short int, unsigned int, unsigned long int, unsigned long long))", "Ошибок нет")]
+	[DataRow(@"return (Infty, -Infty, Uncty, Pi, E, real.Infty, -real.Infty, real.Uncty, real.Pi, real.E)
+", "(Infty, -Infty, Uncty, 3.141592653589793, 2.718281828459045, Infty, -Infty, Uncty, 3.141592653589793, 2.718281828459045)", "Ошибок нет")]
+	[DataRow(@"var r = Infty
+var b = r == real.Infty // true
+var r2 = Uncty
+var b2 = real.IsUncertainty(r2) // true
+return (b, b2)
+", "(true, true)", "Ошибок нет")]
 	[DataRow(@"var x = 5
 return ++x
 ", NullString, "Error 2039 in line 2 at position 7: the prefix increment/decrement operators (\"++x\") were removed from PL051"

@@ -32,15 +32,15 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 			">>>" => TranslateTimeUnsignedRightShiftExpr(ref errors, ref i, LeftNStarType, RightNStarType),
 			"<<" => TranslateTimeLeftShiftExpr(ref errors, ref i, LeftNStarType, RightNStarType),
 			">>" => TranslateTimeRightShiftExpr(ref errors, ref i, LeftNStarType, RightNStarType),
-			"==" => TranslateTimeSingularExpr(i, NStarEntity.Eq(Value1, Value2)),
-			">" => TranslateTimeSingularExpr(i, NStarEntity.Gt(Value1, Value2)),
-			"<" => TranslateTimeSingularExpr(i, NStarEntity.Lt(Value1, Value2)),
-			">=" => TranslateTimeSingularExpr(i, NStarEntity.Goe(Value1, Value2)),
-			"<=" => TranslateTimeSingularExpr(i, NStarEntity.Loe(Value1, Value2)),
-			"!=" => TranslateTimeSingularExpr(i, NStarEntity.Neq(Value1, Value2)),
-			"&&" => TranslateTimeSingularExpr(i, NStarEntity.And(Value1, Value2)),
-			"||" => TranslateTimeSingularExpr(i, NStarEntity.Or(Value1, Value2)),
-			"^^" => TranslateTimeSingularExpr(i, NStarEntity.Xor(Value1, Value2)),
+			"==" => TranslateTimeSingularExpr(i, Value1 == Value2),
+			">" => TranslateTimeSingularExpr(i, Value1.ToNumber() > Value2.ToNumber()),
+			"<" => TranslateTimeSingularExpr(i, Value1.ToNumber() < Value2.ToNumber()),
+			">=" => TranslateTimeSingularExpr(i, Value1.ToNumber() >= Value2.ToNumber()),
+			"<=" => TranslateTimeSingularExpr(i, Value1.ToNumber() <= Value2.ToNumber()),
+			"!=" => TranslateTimeSingularExpr(i, Value1 != Value2),
+			"&&" => TranslateTimeSingularExpr(i, Value1.ToBool() && Value2.ToBool()),
+			"||" => TranslateTimeSingularExpr(i, Value1.ToBool() || Value2.ToBool()),
+			"^^" => TranslateTimeSingularExpr(i, Value1.ToBool() ^ Value2.ToBool()),
 			"&" => TranslateTimeSingularExpr(i, Value1 & Value2),
 			"|" => TranslateTimeSingularExpr(i, Value1 | Value2),
 			"^" => TranslateTimeSingularExpr(i, Value1 ^ Value2),
@@ -61,12 +61,12 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 		var conditionValue = s.AsSpan() switch
 		{
 			"?" => Value1,
-			"?=" => NStarEntity.Eq(Value1, Value2),
-			"?>" => NStarEntity.Gt(Value1, Value2),
-			"?<" => NStarEntity.Lt(Value1, Value2),
-			"?>=" => NStarEntity.Goe(Value1, Value2),
-			"?<=" => NStarEntity.Loe(Value1, Value2),
-			_ => NStarEntity.Neq(Value1, Value2)
+			"?=" => Value1 == Value2,
+			"?>" => Value1.ToNumber() > Value2.ToNumber(),
+			"?<" => Value1.ToNumber() < Value2.ToNumber(),
+			"?>=" => Value1.ToNumber() >= Value2.ToNumber(),
+			"?<=" => Value1.ToNumber() <= Value2.ToNumber(),
+			_ => Value1 != Value2,
 		};
 		if (conditionValue.ToBool())
 		{
@@ -157,9 +157,7 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 			GenerateMessage(ref errors, 0x4008, Branch[i].Pos);
 			return Default;
 		}
-		if (i == 2)
-			Branch[Max(i - 3, 0)] = new((Value1 * Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
-		else if (i >= 4 && TypeEqualsToPrimitive(PrevNStarType, StringTypeName) && Branch[i - 2].Name == "*")
+		if (i == 2 || i >= 4 && TypeEqualsToPrimitive(PrevNStarType, StringTypeName) && Branch[i - 2].Name == "*")
 			Branch[Max(i - 3, 0)] = new((Value1 * Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
 		else
 		{
@@ -200,9 +198,7 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 			GenerateMessage(ref errors, 0x4004, Branch[i].Pos);
 			Branch[Max(i - 3, 0)] = new(DefaultNull, Branch.Pos, Branch.EndPos, Branch.Container);
 		}
-		else if (i == 2)
-			Branch[Max(i - 3, 0)] = new((Value1 / Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
-		else if (i >= 4 && TypeEqualsToPrimitive(PrevNStarType, StringTypeName) && Branch[i - 2].Name == "*")
+		else if (i == 2 || i >= 4 && TypeEqualsToPrimitive(PrevNStarType, StringTypeName) && Branch[i - 2].Name == "*")
 			Branch[Max(i - 3, 0)] = new((Value1 / Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
 		else
 		{
@@ -243,9 +239,7 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 			GenerateMessage(ref errors, 0x4004, Branch[i].Pos);
 			Branch[Max(i - 3, 0)] = new(DefaultNull, Branch.Pos, Branch.EndPos, Branch.Container);
 		}
-		else if (i == 2)
-			Branch[Max(i - 3, 0)] = new((Value1 % Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
-		else if (i >= 4 && TypeEqualsToPrimitive(PrevNStarType, StringTypeName) && Branch[i - 2].Name == "*")
+		else if (i == 2 || i >= 4 && TypeEqualsToPrimitive(PrevNStarType, StringTypeName) && Branch[i - 2].Name == "*")
 			Branch[Max(i - 3, 0)] = new((Value1 % Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
 		else
 		{
@@ -330,9 +324,7 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 			GenerateMessage(ref errors, 0x4007, Branch[i].Pos);
 			return Default;
 		}
-		if (i == 2)
-			Branch[Max(i - 3, 0)] = new((Value1 - Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
-		else if (i >= 4 && TypeEqualsToPrimitive(PrevNStarType, StringTypeName) && Branch[i - 2].Name == "+")
+		if (i == 2 || i >= 4 && TypeEqualsToPrimitive(PrevNStarType, StringTypeName) && Branch[i - 2].Name == "+")
 			Branch[Max(i - 3, 0)] = new((Value1 - Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
 		else
 		{
@@ -444,7 +436,7 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 			var resultValue = Value1 << Value2.ToInt();
 			Branch[Max(i - 3, 0)] = new(resultValue.ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container)
 			{
-				Extra = resultValue.InnerType
+				Extra = resultValue.Type
 			};
 		}
 		else

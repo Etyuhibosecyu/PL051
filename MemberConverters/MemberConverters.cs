@@ -115,6 +115,7 @@ public static class MemberConverters
 	public static String PropertyMapping(String property) => property.ToString() switch
 	{
 		"Infty" => nameof(double.PositiveInfinity),
+		nameof(double.NegativeInfinity) => [],
 		nameof(double.PositiveInfinity) => [],
 		"Uncty" => nameof(double.NaN),
 		nameof(double.NaN) => [],
