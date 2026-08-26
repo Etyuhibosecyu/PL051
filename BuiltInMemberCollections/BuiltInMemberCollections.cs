@@ -62,7 +62,7 @@ public sealed class LexemTree(char @char, ImmutableArray<LexemTree> nextTree, bo
 	public static implicit operator LexemTree(char x) => new(x);
 }
 
-public static class BuiltInMemberCollections
+public class BuiltInMemberCollections
 {
 	public const string Abstract = "abstract";
 	public const string ElseIf = "else if";
@@ -140,17 +140,17 @@ public static class BuiltInMemberCollections
 	/// <summary>
 	/// Sorted by Container, then by Name, also contains Type and ExtraTypes.
 	/// </summary>
-	public static TypeSortedList<TypeVariables> Variables { get; } = [];
+	public TypeSortedList<TypeVariables> Variables { get; } = [];
 
-	public static SortedSet<String> Namespaces { get; } = new(SystemName, SystemCollections, SystemText, SystemThreading);
+	public static ImmutableSortedSet<String> Namespaces { get; } = ImmutableSortedSet.Create<String>(SystemName, SystemCollections, SystemText, SystemThreading);
 
-	public static SortedSet<String> IONamespaces { get; } = new(SystemGUI, SystemIO, SystemNet);
+	public static ImmutableSortedSet<String> IONamespaces { get; } = ImmutableSortedSet.Create<String>(SystemGUI, SystemIO, SystemNet);
 
 	public static G.HashSet<String> ImportedNamespaces { get; } = [];
 
-	public static G.HashSet<String> UserDefinedNamespaces { get; } = [];
+	public G.HashSet<String> UserDefinedNamespaces { get; } = [];
 
-	public static SortedSet<String> ExplicitlyConnectedNamespaces { get; } = [];
+	public SortedSet<String> ExplicitlyConnectedNamespaces { get; } = [];
 
 	public static SortedDictionary<String, Type> PrimitiveTypes { get; } = new()
 	{
@@ -411,24 +411,24 @@ public static class BuiltInMemberCollections
 	/// <summary>
 	/// Sorted by Container and Type, also contains Restrictions, Attributes, BaseType and Decomposition.
 	/// </summary>
-	public static Dictionary<(BlockStack Container, String Type), UserDefinedType> UserDefinedTypes { get; } = new(new BlockStackAndStringEComparer());
+	public Dictionary<(BlockStack Container, String Type), UserDefinedType> UserDefinedTypes { get; } = new(new BlockStackAndStringEComparer());
 
 	/// <summary>
 	/// Sorted by Length, also contains Name and Specified.
 	/// </summary>
-	public static Dictionary<int, (String Name, bool Specified)> InlineArrays { get; } = [];
+	public Dictionary<int, (String Name, bool Specified)> InlineArrays { get; } = [];
 
 	/// <summary>
 	/// Sorted by Container, then by Name, also contains Attributes, BaseType, StartPos and EndPos.
 	/// </summary>
-	public static TypeDictionary<ListHashSet<TempType>> TempTypes { get; } = [];
+	public TypeDictionary<ListHashSet<TempType>> TempTypes { get; } = [];
 
-	public static TypeDictionary<ListHashSet<String>> UnnamedTypeStartIndexes { get; } = [];
+	public TypeDictionary<ListHashSet<String>> UnnamedTypeStartIndexes { get; } = [];
 
 	/// <summary>
 	/// Sorted by tuple, contains Namespace, Interface and ExtraTypes.
 	/// </summary>
-	public static SortedDictionary<(String Namespace, String Interface), (List<String> ExtraTypes, Type DotNetType)> Interfaces { get; } = new()
+	public static ImmutableSortedDictionary<(String Namespace, String Interface), (List<String> ExtraTypes, Type DotNetType)> Interfaces { get; } = new Dictionary<(String Namespace, String Interface), (List<String> ExtraTypes, Type DotNetType)>()
 	{
 		{
 			([], "IChar"), (ExtraTypesT, typeof(void))
@@ -499,37 +499,37 @@ public static class BuiltInMemberCollections
 		{
 			(SystemCollections, "IReadOnlyListRaw"), (NoExtraTypes, typeof(G.IReadOnlyList<>))
 		},
-	};
+	}.ToImmutableSortedDictionary();
 
 	/// <summary>
 	/// Sorted by Class, also contains Interface and ExtraTypes.
 	/// </summary>
-	public static SortedDictionary<String, List<(String Interface, List<String> ExtraTypes)>> UserDefinedImplementedInterfaces { get; } = [];
+	public Dictionary<String, List<(String Interface, List<String> ExtraTypes)>> UserDefinedImplementedInterfaces { get; } = [];
 
 	/// <summary>
 	/// Sorted by Container, then by Name, also contains Type, ExtraTypes and Attributes.
 	/// </summary>
-	public static TypeDictionary<UserDefinedTypeProperties> UserDefinedProperties { get; } = [];
+	public TypeDictionary<UserDefinedTypeProperties> UserDefinedProperties { get; } = [];
 
 	/// <summary>
 	/// Sorted by Container, also contains list of Names.
 	/// </summary>
-	public static TypeDictionary<List<String>> UserDefinedPropertiesOrder { get; } = [];
+	public TypeDictionary<List<String>> UserDefinedPropertiesOrder { get; } = [];
 
 	/// <summary>
 	/// Sorted by Container, then by Name, also contains Index.
 	/// </summary>
-	public static TypeDictionary<Dictionary<String, int>> UserDefinedPropertiesMapping { get; } = [];
+	public TypeDictionary<Dictionary<String, int>> UserDefinedPropertiesMapping { get; } = [];
 
 	/// <summary>
 	/// Sorted by Container, also contains IndexType, Type, ExtraTypes and Attributes.
 	/// </summary>
-	public static TypeSortedList<TypeIndexers> UserDefinedIndexers { get; } = [];
+	public TypeSortedList<TypeIndexers> UserDefinedIndexers { get; } = [];
 
 	/// <summary>
 	/// Sorted by Name, also contains ExtraTypes, ReturnType, Attributes, ParameterTypes, ParameterNames, ParameterExtraTypes, ParameterAttributes and ParameterDefaultValues.
 	/// </summary>
-	public static FunctionsList PublicFunctions { get; } = new()
+	public static ImmutableSortedDictionary<String, FunctionOverload> PublicFunctions { get; } = new Dictionary<String, FunctionOverload>()
 	{
 		{
 			"Abs", new(ExtraTypesT, "T", NoExtraTypes, FunctionAttributes.Multiconst,
@@ -637,7 +637,7 @@ public static class BuiltInMemberCollections
 			"Truncate", new(ExtraTypesT, IntTypeName, NoExtraTypes, FunctionAttributes.Multiconst,
 				[new(SystemIFloatNumber, "x", ExtraTypesT, ParameterAttributes.None, [])])
 		}
-	};
+	}.ToImmutableSortedDictionary();
 
 	/// <summary>
 	/// Sorted by Container, then by Name, also contains Restrictions, ReturnType, Attributes, ParameterTypes, ParameterNames, ParameterRestrictions, ParameterAttributes and ParameterDefaultValues.
@@ -655,22 +655,22 @@ public static class BuiltInMemberCollections
 	/// <summary>
 	/// Sorted by Container, then by Name, also contains Restrictions, ReturnType, Attributes, ParameterTypes, ParameterNames, ParameterRestrictions, ParameterAttributes and ParameterDefaultValues.
 	/// </summary>
-	public static TypeDictionary<UserDefinedMethods> UserDefinedMethods { get; } = [];
+	public TypeDictionary<UserDefinedMethods> UserDefinedMethods { get; } = [];
 
 	/// <summary>
 	/// Sorted by Container, then by StartPos.
 	/// </summary>
-	public static TypeDictionary<SortedDictionary<int, int>> UserDefinedFunctionIndexes { get; } = [];
+	public TypeDictionary<SortedDictionary<int, int>> UserDefinedFunctionIndexes { get; } = [];
 
 	/// <summary>
 	/// Sorted by Container, also contains Attributes, ParameterTypes, ParameterNames, ParameterRestrictions, ParameterAttributes and ParameterDefaultValues.
 	/// </summary>
-	public static TypeDictionary<ConstructorOverloads> UserDefinedConstructors { get; } = [];
+	public TypeDictionary<ConstructorOverloads> UserDefinedConstructors { get; } = [];
 
 	/// <summary>
 	/// Sorted by Container, then by StartPos.
 	/// </summary>
-	public static TypeDictionary<SortedDictionary<int, int>> UserDefinedConstructorIndexes { get; } = [];
+	public TypeDictionary<SortedDictionary<int, int>> UserDefinedConstructorIndexes { get; } = [];
 
 	/// <summary>
 	/// Sorted by Operator, also contains Postfix modifiers, ReturnTypes, ReturnNStarType.ExtraTypes, OpdTypes and OpdExtraTypes.
@@ -871,7 +871,7 @@ public static class BuiltInMemberCollections
 	/// <summary>
 	/// Sorted by Container, also contains Name and Value.
 	/// </summary>
-	public static TypeSortedList<Dictionary<String, UserDefinedConstant>> UserDefinedConstants { get; } = [];
+	public TypeSortedList<Dictionary<String, UserDefinedConstant>> UserDefinedConstants { get; } = [];
 
 	/// <summary>
 	/// Sorted by SrcType, also contains SrcNStarType.ExtraTypes, DestTypes and their DestNStarType.ExtraTypes.
@@ -1379,7 +1379,7 @@ public static class BuiltInMemberCollections
 		return new(namespaces);
 	}
 
-	public static Slice<ExtendedMethodParameter> ProperParameters(this UserDefinedMethodOverload function) =>
+	public static Slice<ExtendedMethodParameter> ProperParameters(UserDefinedMethodOverload function) =>
 		function.Parameters.GetSlice((function.Attributes & FunctionAttributes.Extent) != 0 ? 1 : 0);
 }
 

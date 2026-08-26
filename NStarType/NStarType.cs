@@ -124,11 +124,66 @@ public readonly record struct NStarType(BlockStack MainType, BranchCollection Ex
 	public static NStarType GetPrimitiveType(String primitive) =>
 		(new(new Block(BlockType.Primitive, primitive, 1)), NoBranches);
 
+	public static bool IsComplex(ReadOnlySpan<char> basicType) =>
+		basicType is ComplexTypeName or DeccomplexTypeName or LongComplexTypeName or LongDeccomplexTypeName;
+
+	public readonly bool IsComplex() =>
+		ExtraTypes.Length == 0 && MainType.TryPeek(out var block) && block.BlockType == BlockType.Primitive
+		&& IsComplex(block.Name.AsSpan());
+
+	public static bool IsInteger(ReadOnlySpan<char> basicType) =>
+		basicType is ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
+		or CharTypeName or IntTypeName or UnsignedIntTypeName
+		or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName
+		or LongLongTypeName or UnsignedLongLongTypeName;
+
+	public readonly bool IsInteger() =>
+		ExtraTypes.Length == 0 && MainType.TryPeek(out var block) && block.BlockType == BlockType.Primitive
+		&& IsInteger(block.Name.AsSpan());
+
+	public static bool IsNumeric(ReadOnlySpan<char> basicType) =>
+		basicType is ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
+		or CharTypeName or IntTypeName or UnsignedIntTypeName
+		or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName
+		or LongLongTypeName or UnsignedLongLongTypeName or RealTypeName or DecimalTypeName
+		or UnsignedLongRealTypeName or UnsignedLongDecimalTypeName or LongRealTypeName or LongDecimalTypeName
+		or ComplexTypeName or DeccomplexTypeName or LongComplexTypeName or LongDeccomplexTypeName;
+
+	public readonly bool IsNumeric() =>
+		ExtraTypes.Length == 0 && MainType.TryPeek(out var block) && block.BlockType == BlockType.Primitive
+		&& IsNumeric(block.Name.AsSpan());
+
+	public static bool IsReal(ReadOnlySpan<char> basicType) =>
+		basicType is RealTypeName or DecimalTypeName
+		or UnsignedLongRealTypeName or UnsignedLongDecimalTypeName or LongRealTypeName or LongDecimalTypeName;
+
+	public readonly bool IsReal() =>
+		ExtraTypes.Length == 0 && MainType.TryPeek(out var block) && block.BlockType == BlockType.Primitive
+		&& IsReal(block.Name.AsSpan());
+
+	public static bool IsSmallInteger(ReadOnlySpan<char> basicType) =>
+		basicType is ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
+		or CharTypeName or IntTypeName;
+
 	public static (BlockStack Container, String Type) SplitType(BlockStack blockStack) =>
 		(new(blockStack.ToList().SkipLast(1)), blockStack.TryPeek(out var block) ? block.Name : []);
 
 	public static (BlockStack Container, String Type) SplitType(Stack<Block> blockStack) =>
 		(new(blockStack.ToList().SkipLast(1)), blockStack.TryPeek(out var block) ? block.Name : []);
+
+	public static bool SupportsBitwise(ReadOnlySpan<char> basicType) =>
+		IsInteger(basicType) || basicType is UnsignedLongRealTypeName or UnsignedLongDecimalTypeName;
+
+	public readonly bool SupportsBitwise() =>
+		ExtraTypes.Length == 0 && MainType.TryPeek(out var block) && block.BlockType == BlockType.Primitive
+		&& SupportsBitwise(block.Name.AsSpan());
+
+	public static bool SupportsPlus(ReadOnlySpan<char> basicType) =>
+		IsNumeric(basicType) || basicType == StringTypeName;
+
+	public readonly bool SupportsPlus() =>
+		ExtraTypes.Length == 0 && MainType.TryPeek(out var block) && block.BlockType == BlockType.Primitive
+		&& SupportsPlus(block.Name.AsSpan());
 
 	public override readonly string ToString()
 	{

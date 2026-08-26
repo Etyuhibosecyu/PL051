@@ -18,7 +18,7 @@ public static class JsonConverters
 	public static JsonSerializerSettings SerializerSettings { get; } = new()
 	{
 		Converters = [new StringConverter(), new EnumerableConverter(), new TypeConverter(), new TupleConverter(),
-			new NStarEntityConverter(), new ComplexConverter(), new MpuTConverter(), new MpzTConverter(),
+			new ComplexConverter(), new MpuTConverter(), new MpzTConverter(),
 			new DoubleConverter(), new CharConverter(), new ValueTypeConverter(), new ClassConverter()]
 	};
 
@@ -70,7 +70,7 @@ public static class JsonConverters
 		public override void WriteJson(JsonWriter writer, Complex value, JsonSerializer serializer)
 		{
 			writer.WriteRaw(JsonConvert.SerializeObject(value.Real, SerializerSettings));
-			if (value.Imaginary is 0d / 0 or >= 0)
+			if (value.Imaginary is double.NaN or >= 0)
 				writer.WriteRaw("+");
 			writer.WriteRaw(JsonConvert.SerializeObject(value.Imaginary, SerializerSettings));
 			writer.WriteRaw("i");
@@ -83,22 +83,22 @@ public static class JsonConverters
 			bool hasExistingValue, JsonSerializer serializer) => throw new NotImplementedException();
 		public override void WriteJson(JsonWriter writer, double value, JsonSerializer serializer)
 		{
-			if (value is 1d / 0)
+			if (value is double.PositiveInfinity)
 			{
 				writer.WriteRaw("Infty");
 				return;
 			}
-			if (value is -1d / 0)
+			if (value is double.NegativeInfinity)
 			{
 				writer.WriteRaw("-Infty");
 				return;
 			}
-			if (value is 0d / 0)
+			if (value is double.NaN)
 			{
 				writer.WriteRaw("Uncty");
 				return;
 			}
-			if (value is -0d)
+			if (value is double.NegativeZero)
 			{
 				writer.WriteRaw("0");
 				return;
@@ -203,16 +203,8 @@ public static class JsonConverters
 				writer.WriteNull();
 				return;
 			}
-			writer.WriteRaw(TypeMappingBack(value, [], []).ToString());
+			writer.WriteRaw(TypeMappingBack(value, [], [], []).ToString());
 		}
-	}
-
-	public class NStarEntityConverter : JsonConverter<NStarEntity>
-	{
-		public override NStarEntity ReadJson(JsonReader reader, Type objectType, NStarEntity existingValue,
-			bool hasExistingValue, JsonSerializer serializer) => throw new NotSupportedException();
-		public override void WriteJson(JsonWriter writer, NStarEntity value, JsonSerializer serializer) =>
-			writer.WriteRaw(value.ToString(true).ToString());
 	}
 
 	public class ValueTypeConverter : JsonConverter<ValueType>

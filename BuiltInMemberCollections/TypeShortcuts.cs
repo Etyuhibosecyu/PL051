@@ -77,9 +77,6 @@ public class MethodParameters : List<MethodParameter>
 	public MethodParameters() : base() { }
 	public MethodParameters(G.IEnumerable<MethodParameter> parameters) : base(parameters) { }
 }
-public class FunctionsList : SortedDictionary<String, FunctionOverload>
-{
-}
 public class ExtendedRestrictions : ListHashSet<ExtendedRestriction>
 {
 	public ExtendedRestrictions() : base(new ExtendedRestrictionEComparer()) { }

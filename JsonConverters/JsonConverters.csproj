@@ -6,7 +6,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\NStarEntity\NStarEntity.csproj" />
+		<ProjectReference Include="..\TranslateTimeOperations\TranslateTimeOperations.csproj" />
 		<Reference Include="RedStarMath">
 			<HintPath>..\BuiltInMemberCollections\packages\RedStarMath.dll</HintPath>
 		</Reference>

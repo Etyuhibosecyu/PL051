@@ -2,7 +2,7 @@
 
 namespace PL051.NStar;
 
-internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, TreeBranch Branch,
+internal record class TwoValuesExpr(BuiltInMemberCollections C, object Value1, object Value2, TreeBranch Branch,
 	List<Lexem> Lexems, String Default)
 {
 	private int ErrorOccurred { get; set; }
@@ -32,24 +32,24 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 			">>>" => TranslateTimeUnsignedRightShiftExpr(ref errors, ref i, LeftNStarType, RightNStarType),
 			"<<" => TranslateTimeLeftShiftExpr(ref errors, ref i, LeftNStarType, RightNStarType),
 			">>" => TranslateTimeRightShiftExpr(ref errors, ref i, LeftNStarType, RightNStarType),
-			"==" => TranslateTimeSingularExpr(i, Value1 == Value2),
+			"==" => TranslateTimeSingularExpr(i, Value1.ToNumber() == Value2.ToNumber()),
 			">" => TranslateTimeSingularExpr(i, Value1.ToNumber() > Value2.ToNumber()),
 			"<" => TranslateTimeSingularExpr(i, Value1.ToNumber() < Value2.ToNumber()),
 			">=" => TranslateTimeSingularExpr(i, Value1.ToNumber() >= Value2.ToNumber()),
 			"<=" => TranslateTimeSingularExpr(i, Value1.ToNumber() <= Value2.ToNumber()),
-			"!=" => TranslateTimeSingularExpr(i, Value1 != Value2),
+			"!=" => TranslateTimeSingularExpr(i, Value1.ToNumber() != Value2.ToNumber()),
 			"&&" => TranslateTimeSingularExpr(i, Value1.ToBool() && Value2.ToBool()),
 			"||" => TranslateTimeSingularExpr(i, Value1.ToBool() || Value2.ToBool()),
 			"^^" => TranslateTimeSingularExpr(i, Value1.ToBool() ^ Value2.ToBool()),
-			"&" => TranslateTimeSingularExpr(i, Value1 & Value2),
-			"|" => TranslateTimeSingularExpr(i, Value1 | Value2),
-			"^" => TranslateTimeSingularExpr(i, Value1 ^ Value2),
+			"&" => TranslateTimeSingularExpr(i, Value1.BitwiseAnd(Value2)),
+			"|" => TranslateTimeSingularExpr(i, Value1.BitwiseOr(Value2)),
+			"^" => TranslateTimeSingularExpr(i, Value1.BitwiseXor(Value2)),
 			_ => TranslateTimeDefaultExpr(ref i, LeftNStarType, RightNStarType),
 		};
 		Branch.Remove(Min(i - 1, Branch.Length - 2), 2);
 		i = Max(i - 3, 0);
 		Branch[i].Extra ??= op is "<<<" or ">>>" or "<<" or ">>" ? LeftNStarType
-			: GetResultType(LeftNStarType, RightNStarType, Value1.ToString(true), Value2.ToString(true));
+			: GetResultType(C, LeftNStarType, RightNStarType, Value1.ToString(true), Value2.ToString(true));
 		errorOccurred = ErrorOccurred;
 		return result.Length == 0 ? Branch[i].Name : result;
 	}
@@ -97,7 +97,7 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 			var i2 = i;
 			Branch[i].Extra = Branch.Elements.Filter((_, index) => index == i2 - 1 || index % 4 == 1)
 				.Convert(x => x.Extra is NStarType ElemType ? ElemType : NullType)
-				.Progression((x, y) => GetResultType(x, y, DefaultNull, DefaultNull));
+				.Progression((x, y) => GetResultType(C, x, y, DefaultNull, DefaultNull));
 			i++;
 			result = Branch[i - 2].Name.Copy().Add(' ').AddRange(Branch[i].Name).Add(' ').AddRange(Branch[i - 1].Name);
 		}
@@ -116,14 +116,14 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 		try
 		{
 			if (TypeEqualsToPrimitive(LeftNStarType, LongLongTypeName)
-				&& (!TypesAreCompatible(RightNStarType, IntType, out var warning, Value2.ToString(true, true), out _, out _)
+				&& (!TypesAreCompatible(C, RightNStarType, IntType, out var warning, Value2.ToString(true, true), out _, out _)
 				|| warning))
 			{
 				GenerateMessage(ref errors, 0x4006, otherPos, Branch[i].Name, LeftNStarType, RightNStarType);
 				Branch[i].Extra = NullType;
 				return DefaultNull;
 			}
-			Branch[Max(i - 3, 0)] = new(((NStarEntity)Pow(Value2.ToReal(), Value1.ToReal())).ToString(true, true),
+			Branch[Max(i - 3, 0)] = new(Pow(Value2.ToReal(), Value1.ToReal()).ToString(true, true),
 				Branch.Pos, Branch.EndPos, Branch.Container);
 		}
 		catch
@@ -158,10 +158,10 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 			return Default;
 		}
 		if (i == 2 || i >= 4 && TypeEqualsToPrimitive(PrevNStarType, StringTypeName) && Branch[i - 2].Name == "*")
-			Branch[Max(i - 3, 0)] = new((Value1 * Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
+			Branch[Max(i - 3, 0)] = new(Value1.Multiply(Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
 		else
 		{
-			Branch[i].Extra = GetResultType(LeftNStarType, RightNStarType, Value1.ToString(true), Value2.ToString(true));
+			Branch[i].Extra = GetResultType(C, LeftNStarType, RightNStarType, Value1.ToString(true), Value2.ToString(true));
 			i++;
 			result = Branch[i - 2].Name.Copy().Add(' ').AddRange(Branch[i].Name).Add(' ').AddRange(Branch[i - 1].Name);
 		}
@@ -193,16 +193,16 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 		}
 		if (!TypeEqualsToPrimitive(LeftNStarType, RealTypeName) && !TypeEqualsToPrimitive(RightNStarType, RealTypeName)
 			&& !TypeEqualsToPrimitive(LeftNStarType, DecimalTypeName) && !TypeEqualsToPrimitive(RightNStarType, DecimalTypeName)
-			&& Value2 == 0)
+			&& Value2.ToNumber() == 0)
 		{
 			GenerateMessage(ref errors, 0x4004, Branch[i].Pos);
 			Branch[Max(i - 3, 0)] = new(DefaultNull, Branch.Pos, Branch.EndPos, Branch.Container);
 		}
 		else if (i == 2 || i >= 4 && TypeEqualsToPrimitive(PrevNStarType, StringTypeName) && Branch[i - 2].Name == "*")
-			Branch[Max(i - 3, 0)] = new((Value1 / Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
+			Branch[Max(i - 3, 0)] = new(Value1.Divide(Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
 		else
 		{
-			Branch[i].Extra = GetResultType(LeftNStarType, RightNStarType, Value1.ToString(true), Value2.ToString(true));
+			Branch[i].Extra = GetResultType(C, LeftNStarType, RightNStarType, Value1.ToString(true), Value2.ToString(true));
 			i++;
 			result = Branch[i - 2].Name.Copy().Add(' ').AddRange(Branch[i].Name).Add(' ').AddRange(Branch[i - 1].Name);
 		}
@@ -234,16 +234,16 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 		}
 		if (!TypeEqualsToPrimitive(LeftNStarType, RealTypeName) && !TypeEqualsToPrimitive(RightNStarType, RealTypeName)
 			&& !TypeEqualsToPrimitive(LeftNStarType, DecimalTypeName) && !TypeEqualsToPrimitive(RightNStarType, DecimalTypeName)
-			&& Value2 == 0)
+			&& Value2.ToNumber() == 0)
 		{
 			GenerateMessage(ref errors, 0x4004, Branch[i].Pos);
 			Branch[Max(i - 3, 0)] = new(DefaultNull, Branch.Pos, Branch.EndPos, Branch.Container);
 		}
 		else if (i == 2 || i >= 4 && TypeEqualsToPrimitive(PrevNStarType, StringTypeName) && Branch[i - 2].Name == "*")
-			Branch[Max(i - 3, 0)] = new((Value1 % Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
+			Branch[Max(i - 3, 0)] = new(Value1.Modulo(Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
 		else
 		{
-			Branch[i].Extra = GetResultType(LeftNStarType, RightNStarType, Value1.ToString(true), Value2.ToString(true));
+			Branch[i].Extra = GetResultType(C, LeftNStarType, RightNStarType, Value1.ToString(true), Value2.ToString(true));
 			i++;
 			result = Branch[i - 2].Name.Copy().Add(' ').AddRange(Branch[i].Name).Add(' ').AddRange(Branch[i - 1].Name);
 		}
@@ -274,10 +274,10 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 		var isStringRight = TypeEqualsToPrimitive(RightNStarType, StringTypeName);
 		if (i == 2)
 		{
-			Branch[Max(i - 3, 0)] = new((Value1 + Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
+			Branch[Max(i - 3, 0)] = new(Value1.Plus(Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
 			return result;
 		}
-		Branch[i].Extra = GetResultType(LeftNStarType, RightNStarType, Value1.ToString(true), Value2.ToString(true));
+		Branch[i].Extra = GetResultType(C, LeftNStarType, RightNStarType, Value1.ToString(true), Value2.ToString(true));
 		if (isStringLeft && isStringRight)
 		{
 			i++;
@@ -288,8 +288,10 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 		}
 		else if (isStringLeft || isStringRight)
 		{
-			result = ((String)"((").AddRange(nameof(NStarEntity)).Add(')').AddRange(Value1.ToString(true, true)).Add(' ');
-			result.AddRange(Branch[i++].Name).Add(' ').AddRange(Value2.ToString(true, true)).AddRange(").ToString()");
+			result = ((String)"((").AddRange(nameof(String)).AddRange(")(").AddRange(Value1.ToString(true, true));
+			result.AddRange(").").AddRange(nameof(TranslateTimeOperations.Plus)).Add('(');
+			result.AddRange(Value2.ToString(true, true)).AddRange("))");
+			i++;
 		}
 		else
 		{
@@ -325,41 +327,10 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 			return Default;
 		}
 		if (i == 2 || i >= 4 && TypeEqualsToPrimitive(PrevNStarType, StringTypeName) && Branch[i - 2].Name == "+")
-			Branch[Max(i - 3, 0)] = new((Value1 - Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
+			Branch[Max(i - 3, 0)] = new(Value1.Subtract(Value2).ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container);
 		else
 		{
-			Branch[i].Extra = GetResultType(LeftNStarType, RightNStarType, Value1.ToString(true), Value2.ToString(true));
-			i++;
-			result = Branch[i - 2].Name.Copy().Add(' ').AddRange(Branch[i].Name).Add(' ').AddRange(Branch[i - 1].Name);
-		}
-		return result;
-	}
-
-	private String TranslateTimeUnsignedRightShiftExpr(ref List<String>? errors, ref int i,
-		NStarType LeftNStarType, NStarType RightNStarType)
-	{
-		String result = [];
-		if (!TypesAreCompatible(RightNStarType, IntType, out var warning, Value2.ToString(true, true), out _, out _) || warning)
-		{
-			var otherPos = Branch[i].Pos;
-			GenerateMessage(ref errors, 0x4081, otherPos, Branch[i].Name);
-			Branch[i].Extra = NullType;
-			return DefaultNull;
-		}
-		else if (!TypesAreCompatible(LeftNStarType, LongLongType, out warning, Value1.ToString(true, true), out _, out _)
-			|| warning)
-		{
-			var otherPos = Branch[i].Pos;
-			GenerateMessage(ref errors, 0x4083, otherPos, Branch[i].Name);
-			Branch[i].Extra = NullType;
-			return DefaultNull;
-		}
-		if (i == 2)
-			Branch[Max(i - 3, 0)] = new((Value1 >>> Value2.ToInt()).ToString(true, true),
-				Branch.Pos, Branch.EndPos, Branch.Container);
-		else
-		{
-			Branch[i].Extra = LeftNStarType;
+			Branch[i].Extra = GetResultType(C, LeftNStarType, RightNStarType, Value1.ToString(true), Value2.ToString(true));
 			i++;
 			result = Branch[i - 2].Name.Copy().Add(' ').AddRange(Branch[i].Name).Add(' ').AddRange(Branch[i - 1].Name);
 		}
@@ -370,14 +341,15 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 		NStarType LeftNStarType, NStarType RightNStarType)
 	{
 		String result = [];
-		if (!TypesAreCompatible(RightNStarType, IntType, out var warning, Value2.ToString(true, true), out _, out _) || warning)
+		if (!TypesAreCompatible(C, RightNStarType, IntType, out var warning, Value2.ToString(true, true), out _, out _)
+			|| warning)
 		{
 			var otherPos = Branch[i].Pos;
 			GenerateMessage(ref errors, 0x4081, otherPos, Branch[i].Name);
 			Branch[i].Extra = NullType;
 			return DefaultNull;
 		}
-		else if (!TypesAreCompatible(LeftNStarType, LongLongType, out warning, Value1.ToString(true, true), out _, out _)
+		else if (!TypesAreCompatible(C, LeftNStarType, LongLongType, out warning, Value1.ToString(true, true), out _, out _)
 			|| warning)
 		{
 			var otherPos = Branch[i].Pos;
@@ -386,30 +358,7 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 			return DefaultNull;
 		}
 		if (i == 2)
-			Branch[Max(i - 3, 0)] = new(Value1.CyclicShift(Value2.ToInt()).ToString(true, true),
-				Branch.Pos, Branch.EndPos, Branch.Container);
-		else
-		{
-			Branch[i].Extra = LeftNStarType;
-			i++;
-			result = Branch[i - 2].Name.Copy().Add(' ').AddRange(Branch[i].Name).Add(' ').AddRange(Branch[i - 1].Name);
-		}
-		return result;
-	}
-
-	private String TranslateTimeRightShiftExpr(ref List<String>? errors, ref int i,
-		NStarType LeftNStarType, NStarType RightNStarType)
-	{
-		String result = [];
-		if (!TypesAreCompatible(RightNStarType, IntType, out var warning, Value2.ToString(true, true), out _, out _) || warning)
-		{
-			var otherPos = Branch[i].Pos;
-			GenerateMessage(ref errors, 0x4081, otherPos, Branch[i].Name);
-			Branch[i].Extra = NullType;
-			return DefaultNull;
-		}
-		if (i == 2)
-			Branch[Max(i - 3, 0)] = new((Value1 >> Value2.ToInt()).ToString(true, true),
+			Branch[Max(i - 3, 0)] = new(Value1.CyclicShift((int)Value2.ToNumber()).ToString(true, true),
 				Branch.Pos, Branch.EndPos, Branch.Container);
 		else
 		{
@@ -424,7 +373,8 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 		NStarType LeftNStarType, NStarType RightNStarType)
 	{
 		String result = [];
-		if (!TypesAreCompatible(RightNStarType, IntType, out var warning, Value2.ToString(true, true), out _, out _) || warning)
+		if (!TypesAreCompatible(C, RightNStarType, IntType, out var warning, Value2.ToString(true, true), out _, out _)
+			|| warning)
 		{
 			var otherPos = Branch[i].Pos;
 			GenerateMessage(ref errors, 0x4081, otherPos, Branch[i].Name);
@@ -433,10 +383,10 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 		}
 		if (i == 2)
 		{
-			var resultValue = Value1 << Value2.ToInt();
+			var resultValue = Value1.ShiftLeft((int)Value2.ToNumber());
 			Branch[Max(i - 3, 0)] = new(resultValue.ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container)
 			{
-				Extra = resultValue.Type
+				Extra = TypeMappingBack(resultValue.GetType(), [], [], [])
 			};
 		}
 		else
@@ -448,12 +398,68 @@ internal record class TwoValuesExpr(NStarEntity Value1, NStarEntity Value2, Tree
 		return result;
 	}
 
-	private String TranslateTimeSingularExpr(int i, NStarEntity resultValue) =>
+	private String TranslateTimeRightShiftExpr(ref List<String>? errors, ref int i,
+		NStarType LeftNStarType, NStarType RightNStarType)
+	{
+		String result = [];
+		if (!TypesAreCompatible(C, RightNStarType, IntType, out var warning, Value2.ToString(true, true), out _, out _)
+			|| warning)
+		{
+			var otherPos = Branch[i].Pos;
+			GenerateMessage(ref errors, 0x4081, otherPos, Branch[i].Name);
+			Branch[i].Extra = NullType;
+			return DefaultNull;
+		}
+		if (i == 2)
+			Branch[Max(i - 3, 0)] = new(Value1.ShiftRight((int)Value2.ToNumber()).ToString(true, true),
+				Branch.Pos, Branch.EndPos, Branch.Container);
+		else
+		{
+			Branch[i].Extra = LeftNStarType;
+			i++;
+			result = Branch[i - 2].Name.Copy().Add(' ').AddRange(Branch[i].Name).Add(' ').AddRange(Branch[i - 1].Name);
+		}
+		return result;
+	}
+
+	private String TranslateTimeUnsignedRightShiftExpr(ref List<String>? errors, ref int i,
+		NStarType LeftNStarType, NStarType RightNStarType)
+	{
+		String result = [];
+		if (!TypesAreCompatible(C, RightNStarType, IntType, out var warning, Value2.ToString(true, true), out _, out _)
+			|| warning)
+		{
+			var otherPos = Branch[i].Pos;
+			GenerateMessage(ref errors, 0x4081, otherPos, Branch[i].Name);
+			Branch[i].Extra = NullType;
+			return DefaultNull;
+		}
+		else if (!TypesAreCompatible(C, LeftNStarType, LongLongType, out warning, Value1.ToString(true, true), out _, out _)
+			|| warning)
+		{
+			var otherPos = Branch[i].Pos;
+			GenerateMessage(ref errors, 0x4083, otherPos, Branch[i].Name);
+			Branch[i].Extra = NullType;
+			return DefaultNull;
+		}
+		if (i == 2)
+			Branch[Max(i - 3, 0)] = new(Value1.ShiftRightUnsigned((int)Value2.ToNumber()).ToString(true, true),
+				Branch.Pos, Branch.EndPos, Branch.Container);
+		else
+		{
+			Branch[i].Extra = LeftNStarType;
+			i++;
+			result = Branch[i - 2].Name.Copy().Add(' ').AddRange(Branch[i].Name).Add(' ').AddRange(Branch[i - 1].Name);
+		}
+		return result;
+	}
+
+	private String TranslateTimeSingularExpr(int i, object resultValue) =>
 		(Branch[Max(i - 3, 0)] = new(resultValue.ToString(true, true), Branch.Pos, Branch.EndPos, Branch.Container)).Name;
 
 	private String TranslateTimeDefaultExpr(ref int i, NStarType LeftNStarType, NStarType RightNStarType)
 	{
-		Branch[i].Extra = GetResultType(LeftNStarType, RightNStarType, Value1.ToString(true), Value2.ToString(true));
+		Branch[i].Extra = GetResultType(C, LeftNStarType, RightNStarType, Value1.ToString(true), Value2.ToString(true));
 		return Branch[i - 2].Name.Copy().Add(' ').AddRange(Branch[i].Name).Add(' ').AddRange(Branch[i - 1].Name);
 	}
 

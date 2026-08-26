@@ -24,13 +24,10 @@
 	  <Reference Include="RedStarMath.Complex">
 	    <HintPath>packages\RedStarMath.Complex.dll</HintPath>
 	  </Reference>
-	  <None Update="packages\RedStarMath.Complex.dll">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
 	  <None Update="packages\RedStarMath.dll">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
-	  <None Update="packages\StringCache.programfile">
+	  <None Update="packages\RedStarMath.Complex.dll">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
 	</ItemGroup>

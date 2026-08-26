@@ -6,8 +6,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="System.CodeDom" Version="10.0.7" />
-		<ProjectReference Include="..\MainParsing\MainParsing.csproj" />
+		<ProjectReference Include="..\ObjectConverters\ObjectConverters.csproj" />
 		<Reference Include="RedStarMath">
 			<HintPath>..\BuiltInMemberCollections\packages\RedStarMath.dll</HintPath>
 		</Reference>

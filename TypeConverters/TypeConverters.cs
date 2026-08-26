@@ -38,58 +38,112 @@ public static class TypeConverters
 	private static readonly Dictionary<Type, bool> memoizedTypes = [];
 	private static readonly Dictionary<String, Type> memoizedExtraTypes = [];
 
-	public static bool IsUnmanaged(this Type netType)
+	public static NStarType BasicTypeToExtendedType(String mainType, List<String> extraTypes) =>
+		(GetBlockStack(mainType), GetBranchCollection(extraTypes));
+
+	public static Type ConstructFuncType(Type returnType)
 	{
-		if (!memoizedTypes.TryGetValue(netType, out var answer))
-		{
-			if (!netType.IsValueType)
-				answer = false;
-			else if (netType.IsPrimitive || netType.IsPointer || netType.IsEnum)
-				answer = true;
-			else
-				answer = netType.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
-					.All(f => IsUnmanaged(f.FieldType));
-			memoizedTypes[netType] = answer;
-		}
-		return answer;
+		if (returnType == typeof(void))
+			return typeof(Action);
+		return typeof(Func<>).MakeGenericType(returnType);
 	}
 
-	public static NStarType GetSubtype(NStarType type, int levels = 1)
+	public static Type ConstructFuncType(Type returnType, Type paramType)
 	{
-		if (levels <= 0)
-			return type;
-		else if (levels == 1)
-		{
-			if (type.MainType.TryPeek(out var block) && block.BlockType == BlockType.Primitive)
+		if (returnType == typeof(void))
+			return typeof(Action<>).MakeGenericType(paramType);
+		return typeof(Func<,>).MakeGenericType(paramType, returnType);
+	}
+
+	public static Type ConstructFuncType(Type returnType, Slice<Type> netTypes)
+	{
+		if (returnType == typeof(void))
+			return netTypes.Length switch
 			{
-				if (block.Name == "list")
-					return GetListSubtype(type);
-				else if (block.Name == "range")
-					return IntType;
-				else if (block.Name == TupleName
-					&& (type.ExtraTypes.AllEqual() || type.ExtraTypes.Length == 2
-					&& type.ExtraTypes[1].Length == 0 && int.TryParse(type.ExtraTypes[1].Name.AsSpan(), out _))
-					&& type.ExtraTypes[0].Extra is NStarType Subtype)
-					return Subtype;
-				else
-					return NullType;
-			}
-			else if (type.ExtraTypes.Length == 1 && TypesAreCompatible(type, new(IEnumerableBlockStack, type.ExtraTypes),
-				out var warning, null, out _, out _) && !warning
-				&& type.ExtraTypes[0].Name == "type" && type.ExtraTypes[0].Extra is NStarType Subtype)
-				return Subtype;
-			else if (type.Equals(ChainType))
-				return IntType;
-			else
-				return NullType;
-		}
-		else
+				0 => typeof(Action),
+				1 => typeof(Action<>).MakeGenericType(netTypes[0]),
+				2 => typeof(Action<,>).MakeGenericType(netTypes[0], netTypes[1]),
+				3 => typeof(Action<,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2]),
+				4 => typeof(Action<,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3]),
+				5 => typeof(Action<,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4]),
+				6 => typeof(Action<,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
+					netTypes[5]),
+				7 => typeof(Action<,,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
+					netTypes[5], netTypes[6]),
+				8 => typeof(Action<,,,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
+					netTypes[5], netTypes[6], netTypes[7]),
+				_ => throw new InvalidOperationException(),
+			};
+		return netTypes.Length switch
 		{
-			var t = type;
-			for (var i = 0; i < levels; i++)
-				t = GetSubtype(t);
-			return t;
-		}
+			0 => typeof(Func<>).MakeGenericType(returnType),
+			1 => typeof(Func<,>).MakeGenericType(netTypes[0], returnType),
+			2 => typeof(Func<,,>).MakeGenericType(netTypes[0], netTypes[1], returnType),
+			3 => typeof(Func<,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], returnType),
+			4 => typeof(Func<,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], returnType),
+			5 => typeof(Func<,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
+				returnType),
+			6 => typeof(Func<,,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
+				netTypes[5], returnType),
+			7 => typeof(Func<,,,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
+				netTypes[5], netTypes[6], returnType),
+			8 => typeof(Func<,,,,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
+				netTypes[5], netTypes[6], netTypes[7], returnType),
+			_ => throw new InvalidOperationException(),
+		};
+	}
+
+	public static Type ConstructListType(Type netType)
+	{
+		if (netType == typeof(bool))
+			return typeof(BitList);
+		else
+			return typeof(List<>).MakeGenericType(netType);
+	}
+
+	public static Type ConstructTupleType(Slice<Type> netTypes) => netTypes.Length switch
+	{
+		0 => throw new InvalidOperationException(),
+		1 => typeof(ValueTuple<>).MakeGenericType(netTypes[0]),
+		2 => typeof(ValueTuple<,>).MakeGenericType(netTypes[0], netTypes[1]),
+		3 => typeof(ValueTuple<,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2]),
+		4 => typeof(ValueTuple<,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3]),
+		5 => typeof(ValueTuple<,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4]),
+		6 => typeof(ValueTuple<,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
+			netTypes[5]),
+		7 => typeof(ValueTuple<,,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
+			netTypes[5], netTypes[6]),
+		_ => typeof(ValueTuple<,,,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
+			netTypes[5], netTypes[6], ConstructTupleType(netTypes[7..])),
+	};
+
+	private static BranchCollection GetBranchCollection(List<String> partialBlockStack) =>
+		new(partialBlockStack.Convert(x => new TreeBranch("type", 0, []) { Extra
+			= new NStarType(new BlockStack([new Block(BlockType.Primitive, x, 1)]), NoBranches) }));
+
+	private static List<(NStarType Type, bool Warning)> GetCompatibleTypes((NStarType Type, bool Warning) source,
+		List<(NStarType Type, bool Warning)> blackList)
+	{
+		List<(NStarType Type, bool Warning)> compatibleTypes = new(16);
+		compatibleTypes.AddRange(ImplicitConversionsFromAnything.Convert(x => (x, source.Warning))
+			.Filter(x => !blackList.Contains(item: x)));
+		if (BuiltInMemberCollections.ImplicitConversions.TryGetValue(source.Type.MainType, out var containerConversions)
+			&& containerConversions.TryGetValue(source.Type.ExtraTypes, out var typeConversions))
+			compatibleTypes.AddRange(typeConversions.Convert(x => (x.DestType, x.Warning || source.Warning))
+				.Filter(x => !blackList.Contains(item: x)));
+		return compatibleTypes;
+	}
+
+	private static NStarType GetListResultType(BuiltInMemberCollections C, NStarType leftType, NStarType rightType,
+		String leftTypeString, String rightTypeString, String leftValue, String rightValue)
+	{
+		if (CollectionTypesList.Contains(item: leftTypeString) || CollectionTypesList.Contains(item: rightTypeString))
+			return GetListType(GetResultType(C, GetSubtype(C, leftType), GetSubtype(C, rightType), leftValue, rightValue));
+		else if (leftTypeString == "list")
+			return GetListType(GetResultType(C, GetSubtype(C, leftType), (rightTypeString == "list")
+				? GetSubtype(C, rightType) : rightType, leftValue, rightValue));
+		else
+			return GetListType(GetResultType(C, leftType, GetSubtype(C, rightType), leftValue, rightValue));
 	}
 
 	private static NStarType GetListSubtype(NStarType type)
@@ -105,76 +159,6 @@ public static class TypeConverters
 			return GetListType(type.ExtraTypes[1]);
 		else
 			return (ListBlockStack, new BranchCollection { new((n - 1).ToString(), 0, []), type.ExtraTypes[1] });
-	}
-
-	public static (int Depth, NStarType LeafType) GetTypeDepthAndLeafType(NStarType type)
-	{
-		var Depth = 0;
-		var LeafType = type;
-		while (true)
-		{
-			if (TypeEqualsToPrimitive(LeafType, "list", false))
-			{
-				if (LeafType.ExtraTypes.Length == 1
-					&& LeafType.ExtraTypes[0].Name == "type" && LeafType.ExtraTypes[0].Extra is NStarType Subtype)
-				{
-					Depth++;
-					LeafType = Subtype;
-				}
-				else if (LeafType.ExtraTypes[0].Name != "type"
-					&& int.TryParse(LeafType.ExtraTypes[0].Name.ToString(), out var n)
-					&& LeafType.ExtraTypes[1].Name == "type" && LeafType.ExtraTypes[1].Extra is NStarType Subtype2)
-				{
-					Depth += n;
-					LeafType = Subtype2;
-				}
-				else if (LeafType.ExtraTypes[1].Name == "type" && LeafType.ExtraTypes[1].Extra is NStarType Subtype3)
-				{
-					Depth++;
-					LeafType = Subtype3;
-				}
-				else
-					return (Depth, LeafType);
-			}
-			else if (LeafType.MainType.TryPeek(out var block)
-				&& block.BlockType is BlockType.Class or BlockType.Struct or BlockType.Interface
-				&& CollectionTypesList.Contains(item: LeafType.MainType.ToString().ToNString().GetAfterLast("."))
-					&& LeafType.ExtraTypes[^1].Name == "type" && LeafType.ExtraTypes[^1].Extra is NStarType Subtype)
-			{
-				Depth++;
-				LeafType = Subtype;
-			}
-			else if (LeafType.Equals(ChainType))
-				return (Depth + 1, IntType);
-			else
-				return (Depth, LeafType);
-		}
-	}
-
-	public static NStarType GetResultType(NStarType leftType, NStarType rightType, String leftValue, String rightValue)
-	{
-		try
-		{
-			if (leftType.Equals(rightType) && !leftType.Equals(GetPrimitiveType(DateTime)))
-				return leftType;
-			if (TypeIsPrimitive(leftType.MainType) && TypeIsPrimitive(rightType.MainType))
-			{
-				var leftTypeName = leftType.MainType.Peek().Name;
-				var rightTypeName = rightType.MainType.Peek().Name;
-				if (leftType.ExtraTypes.Length == 0 && rightType.ExtraTypes.Length == 0)
-					return GetPrimitiveType(GetPrimitiveResultType(leftTypeName, rightTypeName, leftValue, rightValue));
-				else if (leftTypeName == "list" || rightTypeName == "list")
-					return GetListResultType(leftType, rightType, leftTypeName, rightTypeName, leftValue, rightValue);
-				else
-					return NullType;
-			}
-			else
-				return NullType;
-		}
-		catch (StackOverflowException)
-		{
-			return NullType;
-		}
 	}
 
 	private static String GetPrimitiveResultType(String leftTypeName, String rightTypeName, String leftValue, String rightValue)
@@ -301,26 +285,452 @@ public static class TypeConverters
 			return NullString;
 	}
 
-	private static NStarType GetListResultType(NStarType leftType, NStarType rightType,
-		String leftTypeString, String rightTypeString, String leftValue, String rightValue)
+	public static List<(Type ExtraType, Type TypeToInsert)> GetReplacementPatterns(Type[] genericArguments,
+		Type[] parameterTypes)
 	{
-		if (CollectionTypesList.Contains(item: leftTypeString) || CollectionTypesList.Contains(item: rightTypeString))
-			return GetListType(GetResultType(GetSubtype(leftType), GetSubtype(rightType), leftValue, rightValue));
-		else if (leftTypeString == "list")
-			return GetListType(GetResultType(GetSubtype(leftType), (rightTypeString == "list")
-				? GetSubtype(rightType) : rightType, leftValue, rightValue));
-		else
-			return GetListType(GetResultType(leftType, GetSubtype(rightType), leftValue, rightValue));
+		var length = Min(genericArguments.Length, parameterTypes.Length);
+		List<(Type ExtraType, Type TypeToInsert)> result = [];
+		for (var i = 0; i < length; i++)
+		{
+			var genericArgument = genericArguments[i];
+			var parameterType = parameterTypes[i];
+			if (parameterType == typeof(String))
+			{
+				result.Add((genericArgument, /*typeof(G.IEnumerable<>).IsAssignableFrom(genericArgument)
+					? */typeof(char)/* : typeof(String)*/));
+				continue;
+			}
+			if (!parameterType.IsGenericType)
+			{
+				if (parameterType != typeof(void))
+					result.Add((genericArgument, parameterType));
+				continue;
+			}
+			var parameterGenericArguments = parameterType.GetGenericTypeDefinition().GetGenericArguments();
+			var index = parameterGenericArguments.FindIndex(x => x.Name == genericArgument.Name);
+			if (index != -1)
+			{
+				result.Add((genericArgument, parameterType.GetGenericArguments()[index]));
+				continue;
+			}
+			result.AddRange(GetReplacementPatterns(genericArgument.GetGenericArguments(),
+				parameterType.GetGenericArguments()));
+		}
+		return result;
 	}
 
-	public static NStarType BasicTypeToExtendedType(String mainType, List<String> extraTypes) =>
-		(GetBlockStack(mainType), GetBranchCollection(extraTypes));
+	public static NStarType GetResultType(BuiltInMemberCollections C, NStarType leftType, NStarType rightType,
+		String leftValue, String rightValue)
+	{
+		try
+		{
+			if (leftType.Equals(rightType) && !leftType.Equals(GetPrimitiveType(DateTime)))
+				return leftType;
+			if (TypeIsPrimitive(leftType.MainType) && TypeIsPrimitive(rightType.MainType))
+			{
+				var leftTypeName = leftType.MainType.Peek().Name;
+				var rightTypeName = rightType.MainType.Peek().Name;
+				if (leftType.ExtraTypes.Length == 0 && rightType.ExtraTypes.Length == 0)
+					return GetPrimitiveType(GetPrimitiveResultType(leftTypeName, rightTypeName, leftValue, rightValue));
+				else if (leftTypeName == "list" || rightTypeName == "list")
+					return GetListResultType(C, leftType, rightType, leftTypeName, rightTypeName, leftValue, rightValue);
+				else
+					return NullType;
+			}
+			else
+				return NullType;
+		}
+		catch (StackOverflowException)
+		{
+			return NullType;
+		}
+	}
 
-	public static BranchCollection GetBranchCollection(List<String> partialBlockStack) =>
-		new(partialBlockStack.Convert(x => new TreeBranch("type", 0, []) { Extra
-			= new NStarType(new BlockStack([new Block(BlockType.Primitive, x, 1)]), NoBranches) }));
+	public static NStarType GetSubtype(BuiltInMemberCollections C, NStarType type, int levels = 1)
+	{
+		if (levels <= 0)
+			return type;
+		else if (levels == 1)
+		{
+			if (type.MainType.TryPeek(out var block) && block.BlockType == BlockType.Primitive)
+			{
+				if (block.Name == "list")
+					return GetListSubtype(type);
+				else if (block.Name == "range")
+					return IntType;
+				else if (block.Name == TupleName
+					&& (type.ExtraTypes.AllEqual() || type.ExtraTypes.Length == 2
+					&& type.ExtraTypes[1].Length == 0 && int.TryParse(type.ExtraTypes[1].Name.AsSpan(), out _))
+					&& type.ExtraTypes[0].Extra is NStarType Subtype)
+					return Subtype;
+				else
+					return NullType;
+			}
+			else if (type.ExtraTypes.Length == 1 && TypesAreCompatible(C, type, new(IEnumerableBlockStack, type.ExtraTypes),
+				out var warning, null, out _, out _) && !warning
+				&& type.ExtraTypes[0].Name == "type" && type.ExtraTypes[0].Extra is NStarType Subtype)
+				return Subtype;
+			else if (type.Equals(ChainType))
+				return IntType;
+			else
+				return NullType;
+		}
+		else
+		{
+			var t = type;
+			for (var i = 0; i < levels; i++)
+				t = GetSubtype(C, t);
+			return t;
+		}
+	}
 
-	public static bool TypesAreCompatible(NStarType sourceType, NStarType destinationType,
+	private static (int Depth, NStarType LeafType) GetTypeDepthAndLeafType(NStarType type)
+	{
+		var Depth = 0;
+		var LeafType = type;
+		while (true)
+		{
+			if (TypeEqualsToPrimitive(LeafType, "list", false))
+			{
+				if (LeafType.ExtraTypes.Length == 1
+					&& LeafType.ExtraTypes[0].Name == "type" && LeafType.ExtraTypes[0].Extra is NStarType Subtype)
+				{
+					Depth++;
+					LeafType = Subtype;
+				}
+				else if (LeafType.ExtraTypes[0].Name != "type"
+					&& int.TryParse(LeafType.ExtraTypes[0].Name.ToString(), out var n)
+					&& LeafType.ExtraTypes[1].Name == "type" && LeafType.ExtraTypes[1].Extra is NStarType Subtype2)
+				{
+					Depth += n;
+					LeafType = Subtype2;
+				}
+				else if (LeafType.ExtraTypes[1].Name == "type" && LeafType.ExtraTypes[1].Extra is NStarType Subtype3)
+				{
+					Depth++;
+					LeafType = Subtype3;
+				}
+				else
+					return (Depth, LeafType);
+			}
+			else if (LeafType.MainType.TryPeek(out var block)
+				&& block.BlockType is BlockType.Class or BlockType.Struct or BlockType.Interface
+				&& CollectionTypesList.Contains(item: LeafType.MainType.ToString().ToNString().GetAfterLast("."))
+					&& LeafType.ExtraTypes[^1].Name == "type" && LeafType.ExtraTypes[^1].Extra is NStarType Subtype)
+			{
+				Depth++;
+				LeafType = Subtype;
+			}
+			else if (LeafType.Equals(ChainType))
+				return (Depth + 1, IntType);
+			else
+				return (Depth, LeafType);
+		}
+	}
+
+	public static bool IsAssignableFromExt(this Type destination, Type source) =>
+		destination.IsAssignableFrom(source) || destination == typeof(MpzT) && new[] { typeof(byte), typeof(short),
+		typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(MpzT) }.Contains(source)
+		|| destination == typeof(long) && new[] { typeof(byte),
+		typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long) }.Contains(source)
+		|| destination == typeof(int) && new[] { typeof(byte), typeof(short), typeof(ushort), typeof(int) }.Contains(source)
+		|| destination == typeof(short) && new[] { typeof(byte), typeof(short) }.Contains(source)
+		|| destination == typeof(ulong) && new[] { typeof(byte), typeof(ushort), typeof(uint), typeof(ulong) }.Contains(source)
+		|| destination == typeof(uint) && new[] { typeof(byte), typeof(ushort), typeof(uint) }.Contains(source)
+		|| destination == typeof(ushort) && new[] { typeof(byte), typeof(ushort) }.Contains(source);
+
+	public static bool IsUnmanaged(this Type netType)
+	{
+		if (!memoizedTypes.TryGetValue(netType, out var answer))
+		{
+			if (!netType.IsValueType)
+				answer = false;
+			else if (netType.IsPrimitive || netType.IsPointer || netType.IsEnum)
+				answer = true;
+			else
+				answer = netType.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+					.All(f => IsUnmanaged(f.FieldType));
+			memoizedTypes[netType] = answer;
+		}
+		return answer;
+	}
+
+	public static dynamic ListWithSingle<T>(T item)
+	{
+		if (item is bool b)
+			return new BitList([b]);
+		else
+			return new List<T>(item);
+	}
+
+	public static List<char> RandomVarName() => RedStarLinq.Fill(32, _ => (char)(random.Next(2) == 1
+		? random.Next('A', 'Z' + 1) : random.Next('a', 'z' + 1)));
+
+	public static Type ReplaceExtraNetType(Type originalType, (Type ExtraType, Type TypeToInsert) pattern)
+	{
+		if (originalType.Name.Equals(pattern.ExtraType.Name))
+			return pattern.ExtraType.IsGenericMethodParameter || pattern.ExtraType.IsGenericParameter
+				? pattern.TypeToInsert : pattern.ExtraType;
+		else
+		{
+			var genericArguments = originalType.GetGenericArguments();
+			if (genericArguments.Length == 0)
+				return originalType;
+			return originalType.GetGenericTypeDefinition().MakeGenericType([.. genericArguments.Convert(x =>
+				ReplaceExtraNetType(x, pattern))]);
+		}
+	}
+
+	public static NStarType ReplaceExtraType(NStarType originalType, (String ExtraType, NStarType TypeToInsert) pattern)
+	{
+		if (originalType.MainType.Length == 1 && originalType.MainType.Peek().BlockType == BlockType.Extra
+			&& originalType.MainType.Peek().Name == pattern.ExtraType && originalType.ExtraTypes.Length == 0)
+			return pattern.TypeToInsert;
+		else
+		{
+			return new(originalType.MainType, new(originalType.ExtraTypes
+				.ToList((x, index) => new G.KeyValuePair<String?, TreeBranch>(originalType.ExtraTypes.Keys
+				.TryGetKey(index, out var key) ? key : null, x.Name != "type"
+				|| x.Extra is not NStarType InnerNStarType ? new TreeBranch(x.Name, x.Pos, x.Container)
+				: new TreeBranch("type", x.Pos, x.Container)
+				{
+					Extra = ReplaceExtraType(InnerNStarType, pattern)
+				}))));
+		}
+	}
+
+	public static Type TypeMapping(BuiltInMemberCollections C, NStarType NStarType)
+	{
+		if (TypeEqualsToPrimitive(NStarType, "list", false))
+		{
+			if (NStarType.ExtraTypes.Length == 1)
+			{
+				if (NStarType.ExtraTypes[0].Name != "type" || NStarType.ExtraTypes[0].Extra is not NStarType InnerNStarType)
+					throw new InvalidOperationException();
+				var netType = TypeMapping(C, InnerNStarType);
+				return ConstructListType(netType);
+			}
+			else
+			{
+				if (NStarType.ExtraTypes[0].Name == "type"
+					|| !int.TryParse(NStarType.ExtraTypes[0].Name.ToString(), out var levelsCount) || levelsCount < 1
+					|| NStarType.ExtraTypes[^1].Name != "type"
+					|| NStarType.ExtraTypes[^1].Extra is not NStarType InnerNStarType)
+					throw new InvalidOperationException();
+				var netType = TypeMapping(C, InnerNStarType);
+				Type outputType;
+				if (netType == typeof(bool))
+					outputType = typeof(BitList);
+				else
+					outputType = typeof(List<>).MakeGenericType(netType);
+				for (var i = 1; i < levelsCount; i++)
+					outputType = typeof(List<>).MakeGenericType(outputType);
+				return outputType;
+			}
+		}
+		if (NStarType.MainType.Equals(FuncBlockStack))
+		{
+			List<Type> funcComponents = [];
+			if (NStarType.ExtraTypes[0].Name != "type" || NStarType.ExtraTypes[0].Extra is not NStarType InnerNStarType)
+				throw new InvalidOperationException();
+			var returnType = TypeMapping(C, InnerNStarType);
+			for (var i = 1; i < NStarType.ExtraTypes.Length; i++)
+			{
+				if (NStarType.ExtraTypes[i].Name != "type" || NStarType.ExtraTypes[i].Extra is not NStarType InnerNStarType2)
+					throw new InvalidOperationException();
+				funcComponents.Add(TypeMapping(C, InnerNStarType2));
+			}
+			return ConstructFuncType(returnType, funcComponents.GetSlice());
+		}
+		if (!TypeEqualsToPrimitive(NStarType, TupleName, false))
+		{
+			var split = SplitType(NStarType.MainType);
+			if (C.TypeExists(split, out var netType))
+			{
+				if (netType == typeof(Task<>)
+					&& (NStarType.ExtraTypes.Length == 0
+					|| NStarType.ExtraTypes.Length == 1 && NStarType.ExtraTypes[0].Name == "type"
+					&& NStarType.ExtraTypes[0].Extra is NStarType InnerNStarType && InnerNStarType.Equals(NullType)))
+					return typeof(Task);
+				else if (netType == typeof(ValueTask<>)
+					&& (NStarType.ExtraTypes.Length == 0
+					|| NStarType.ExtraTypes.Length == 1 && NStarType.ExtraTypes[0].Name == "type"
+					&& NStarType.ExtraTypes[0].Extra is NStarType ValueInnerNStarType && ValueInnerNStarType.Equals(NullType)))
+					return typeof(ValueTask);
+				else if (netType.ContainsGenericParameters)
+					return netType.MakeGenericType(NStarType.ExtraTypes.ToArray(x => TypeMapping(C, x)));
+				else
+					return netType;
+			}
+			else if (Interfaces.TryGetValue((split.Container.ToString(), split.Type), out var @interface))
+			{
+				netType = @interface.DotNetType;
+				if (netType.ContainsGenericParameters)
+					return netType.MakeGenericType(NStarType.ExtraTypes.ToArray(x => TypeMapping(C, x)));
+				else
+					return netType;
+			}
+			else if (NStarType.MainType.TryPeek(out var block) && block.BlockType == BlockType.Extra)
+			{
+				if (memoizedExtraTypes.TryGetValue(block.Name, out var memoized))
+					return memoized;
+				var assembly = EasyEval.CompileAndGetAssembly("class C<" + block.Name + ">{}class P{static void Main(){}}",
+					[], out var errors);
+				if (assembly is null || errors != "Compilation done without any error.\r\n")
+					throw new InvalidOperationException();
+				return memoizedExtraTypes[block.Name] = assembly.DefinedTypes.First().GetGenericArguments().First();
+			}
+			else
+				throw new InvalidOperationException();
+		}
+		if (NStarType.ExtraTypes.Length == 0)
+			return typeof(void);
+		List<Type> tupleComponents = [];
+		if (NStarType.ExtraTypes[0].Name != "type" || NStarType.ExtraTypes[0].Extra is not NStarType InnerNStarType3)
+			throw new InvalidOperationException();
+		var first = TypeMapping(C, InnerNStarType3);
+		if (NStarType.ExtraTypes.Length == 1)
+			return first;
+		var innerResult = first;
+		if (NStarType.ExtraTypes.Length == 2 && NStarType.ExtraTypes[1].Length == 0
+			&& int.TryParse(NStarType.ExtraTypes[1].Name.AsSpan(), out var tupleLength))
+			return ConstructTupleType(RedStarLinq.FillArray(innerResult, tupleLength).GetSlice());
+		for (var i = 1; i < NStarType.ExtraTypes.Length; i++)
+		{
+			if (NStarType.ExtraTypes[i].Name == "type" && NStarType.ExtraTypes[i].Extra is NStarType InnerNStarType2)
+			{
+				tupleComponents.Add(innerResult);
+				first = TypeMapping(C, InnerNStarType2);
+				innerResult = first;
+				continue;
+			}
+			innerResult = ConstructTupleType(RedStarLinq.FillArray(innerResult,
+				int.TryParse(NStarType.ExtraTypes[i].Name.ToString(), out var n) ? n : 1).GetSlice());
+		}
+		return ConstructTupleType(tupleComponents.Add(innerResult).GetSlice());
+	}
+
+	private static Type TypeMapping(BuiltInMemberCollections C, TreeBranch branch)
+	{
+		if (branch.Name != "type" || branch.Extra is not NStarType NStarType)
+			throw new InvalidOperationException();
+		return TypeMapping(C, NStarType);
+	}
+
+	public static NStarType TypeMappingBack(Type netType, Type[] genericArguments, BranchCollection extraTypes,
+		Type[] netTypes)
+	{
+		if (netType.IsGenericParameter)
+		{
+			var genericArgumentsIndex = Array.IndexOf(genericArguments, netType);
+			if (genericArgumentsIndex < 0 || extraTypes.Length <= genericArgumentsIndex)
+				return new(new(new Block(BlockType.Extra, netType.Name, 1)), []);
+			else if (extraTypes[genericArgumentsIndex].Name != "type"
+				|| extraTypes[genericArgumentsIndex].Extra is not NStarType InnerNStarType)
+				throw new InvalidOperationException();
+			else
+				return InnerNStarType;
+		}
+		if (netType.IsSZArray || netType.IsPointer)
+			netType = typeof(List<>).MakeGenericType(netType.GetElementType() ?? throw new InvalidOperationException());
+		else if (netType == typeof(System.Collections.BitArray))
+			netType = typeof(BitList);
+		else if (netType == typeof(Index))
+			netType = typeof(int);
+		var typeGenericArguments = netType.GetGenericArguments();
+		if (netType.Name.Contains("Action"))
+		{
+			return new(FuncBlockStack, new([new TreeBranch("type", 0, []) { Extra = NullType },
+				.. typeGenericArguments.Convert((x, index) =>
+				new TreeBranch("type", 0, []) { Extra = TypeMappingBack(x, genericArguments, extraTypes, netTypes) })]));
+		}
+		if (netType.Name.Contains(nameof(Func<>)))
+		{
+			return new(FuncBlockStack, new([typeGenericArguments[^1].Wrap(x =>
+				new TreeBranch("type", 0, [])
+				{
+					Extra = TypeMappingBack(x.GetGenericArguments().Length != 0
+					&& x.GetGenericTypeDefinition() == typeof(ValueTask<>)
+					? x.GetGenericArguments()[0] : x, genericArguments, extraTypes, netTypes)
+				}), .. typeGenericArguments.GetSlice(..^1).Convert((x, index) =>
+				new TreeBranch("type", 0, []) { Extra = TypeMappingBack(x, genericArguments, extraTypes, netTypes) })]));
+		}
+		if (netType.FullName is not null && netType.GetGenericArguments().Length == 1
+			&& typeof(G.IEnumerable<>).MakeGenericType(netType.GetGenericArguments()).IsAssignableFrom(netType)
+			&& extraTypes.Length == 2 && extraTypes[0].Name != "type" && extraTypes[0].Extra is null
+			&& int.TryParse(extraTypes[0].Name.AsSpan(), out var n))
+			return new(ListBlockStack, extraTypes);
+		int foundIndex;
+		if ((foundIndex = genericArguments.FindIndex(x => x.Name == netType.Name)) >= 0)
+			netType = netTypes[foundIndex];
+		List<Type> innerTypes = [];
+		foreach (var genericArgument in netType.GenericTypeArguments)
+		{
+			if ((foundIndex = genericArguments.IndexOf(genericArgument)) < 0)
+				continue;
+			innerTypes.Add(netTypes[foundIndex]);
+		}
+		var oldNetType = netType;
+		if (netType.IsGenericType)
+			netType = netType.GetGenericTypeDefinition();
+		while (true)
+		{
+			if (CreateVar(PrimitiveTypes.Find(x => x.Value == netType).Key, out var typename) is not null)
+				return typename == "list" ? GetListType(TypeMappingBack(typeGenericArguments[0], genericArguments,
+					new(extraTypes.TakeLast(genericArguments.Length)), netTypes))
+					: GetPrimitiveType(typename);
+			else if (netType == typeof(Task))
+				return new(TaskBlockStack, [new("type", 0, []) { Extra = NullType }]);
+			else if (netType == typeof(ValueTask))
+				return new(ValueTaskBlockStack, [new("type", 0, []) { Extra = NullType }]);
+			else if (ExtraTypes.TryGetKey(netType, out var type2) || ImportedTypes.TryGetKey(netType, out type2)
+				|| IOTypes.TryGetKey(netType, out type2))
+				return new(GetBlockStack(type2.Namespace + "." + type2.Type),
+					new([.. typeGenericArguments.Convert((x, index) =>
+					new TreeBranch("type", 0, []) { Extra = TypeMappingBack(x, genericArguments, extraTypes, netTypes) })]));
+			else if (CreateVar(Interfaces.Find(x => x.Value.DotNetType == netType), out var type3).Key != default)
+				return new(GetBlockStack(type3.Key.Namespace + "." + type3.Key.Interface),
+					new([.. typeGenericArguments.Convert((x, index) =>
+					new TreeBranch("type", 0,[]) { Extra = TypeMappingBack(x, genericArguments, extraTypes, netTypes) })]));
+			else if (netType == typeof(string))
+				return StringType;
+			else if (netType == typeof(BitList))
+				return GetListType(BoolType);
+			else if (innerTypes.Length != 0)
+			{
+				netType = netType.MakeGenericType([.. innerTypes]);
+				if (!netType.Name.Contains("Tuple") && !netType.Name.Contains("KeyValuePair"))
+				{
+					innerTypes.Clear();
+					continue;
+				}
+				return new(TupleBlockStack, new(netType.GenericTypeArguments.ToList(x =>
+					new TreeBranch("type", 0, []) { Extra = TypeMappingBack(x, genericArguments, extraTypes, netTypes) })));
+			}
+			else if (!typeof(ITuple).IsAssignableFrom(oldNetType))
+				throw new InvalidOperationException();
+			break;
+		}
+		BranchCollection result = [];
+		var tupleTypes = new Queue<Type>();
+		tupleTypes.Enqueue(oldNetType);
+		while (tupleTypes.Length != 0 && tupleTypes.Dequeue() is Type tupleType)
+			foreach (var field in tupleType.GetFields())
+			{
+				if (field.Name == "Rest")
+				{
+					tupleTypes.Enqueue(tupleType);
+					continue;
+				}
+				result.Add(new("type", 0, [])
+				{
+					Extra = TypeMappingBack(field.FieldType, genericArguments, extraTypes, netTypes)
+				});
+			}
+		return new(TupleBlockStack, result);
+	}
+
+	public static bool TypesAreCompatible(BuiltInMemberCollections C, NStarType sourceType, NStarType destinationType,
 		out bool warning, String? srcExpr, out String? destExpr, out String? extraMessage)
 	{
 		warning = false;
@@ -332,7 +742,7 @@ public static class TypeConverters
 			&& destinationType.ExtraTypes[0].Name == "type"
 			&& destinationType.ExtraTypes[0].Extra is NStarType DestinationSubtype)
 			destinationType = DestinationSubtype;
-		if (IsEqualOrDerived(sourceType, destinationType) && (sourceType.ExtraTypes, destinationType.ExtraTypes).Combine()
+		if (C.IsEqualOrDerived(sourceType, destinationType) && (sourceType.ExtraTypes, destinationType.ExtraTypes).Combine()
 			.All(x => x.Item1.Equals(x.Item2)))
 		{
 			destExpr = srcExpr;
@@ -353,14 +763,14 @@ public static class TypeConverters
 			destExpr = DefaultNull;
 			return true;
 		}
-		if (ImplicitConversionsFromAnything.Contains(destinationType, new FullTypeEComparer()))
+		if (ImplicitConversionsFromAnything.Contains(destinationType))
 		{
 			if (srcExpr is null)
 				destExpr = null;
 			else if (TypeEqualsToPrimitive(destinationType, StringTypeName))
 				destExpr = ((String)"(").AddRange(srcExpr).AddRange(").ToString()");
 			else if (TypeEqualsToPrimitive(destinationType, "list", false))
-				destExpr = ((String)"ListWithSingle(").AddRange(srcExpr).Add(')');
+				destExpr = ((String)nameof(ListWithSingle)).Add('(').AddRange(srcExpr).Add(')');
 			else
 				destExpr = srcExpr;
 			return true;
@@ -394,7 +804,7 @@ public static class TypeConverters
 			return sourceType.ExtraTypes.Combine(destinationType.ExtraTypes)
 				.All(x => x.Item1.Name == "type" && x.Item1.Extra is NStarType LeftType
 				&& x.Item2.Name == "type" && x.Item2.Extra is NStarType RightType
-				&& TypesAreCompatible(LeftType, RightType, out var innerWarning, null, out _, out _) && !innerWarning
+				&& TypesAreCompatible(C, LeftType, RightType, out var innerWarning, null, out _, out _) && !innerWarning
 				|| x.Item1.Length == 0 && int.TryParse(x.Item1.Name.AsSpan(), out var leftLength)
 				&& x.Item2.Length == 0 && int.TryParse(x.Item2.Name.AsSpan(), out var rightLength)
 				&& leftLength == rightLength)
@@ -403,7 +813,7 @@ public static class TypeConverters
 				&& destinationType.ExtraTypes[1].Length == 0
 				&& int.TryParse(destinationType.ExtraTypes[1].Name.AsSpan(), out var rightLength)
 				&& sourceType.ExtraTypes.All(x => x.Name == "type" && x.Extra is NStarType LeftType
-				&& TypesAreCompatible(LeftType, RightType, out var innerWarning, null, out _, out _) && !innerWarning);
+				&& TypesAreCompatible(C, LeftType, RightType, out var innerWarning, null, out _, out _) && !innerWarning);
 		}
 		var destinationTypeString = destinationType.MainType.ToString();
 		if (TypeEqualsToPrimitive(destinationType, "list", false) || destinationType.MainType.Length != 0
@@ -412,7 +822,7 @@ public static class TypeConverters
 		{
 			if (TypeEqualsToPrimitive(sourceType, TupleName, false))
 			{
-				var subtype = GetSubtype(destinationType);
+				var subtype = GetSubtype(C, destinationType);
 				if (subtype.Equals(sourceType))
 				{
 					destExpr = srcExpr;
@@ -426,7 +836,7 @@ public static class TypeConverters
 					return false;
 				}
 				else if (!sourceType.ExtraTypes.All(x => x.Name == "type" && x.Extra is NStarType ValueType
-					&& TypesAreCompatible(ValueType, subtype, out var innerWarning, null, out _, out _) && !innerWarning))
+					&& TypesAreCompatible(C, ValueType, subtype, out var innerWarning, null, out _, out _) && !innerWarning))
 				{
 					destExpr = DefaultNull;
 					return false;
@@ -450,7 +860,7 @@ public static class TypeConverters
 				return true;
 			}
 			else if (SourceDepth <= DestinationDepth
-				&& TypesAreCompatible(SourceLeafType, DestinationLeafType, out warning, null, out _, out _) && !warning)
+				&& TypesAreCompatible(C, SourceLeafType, DestinationLeafType, out warning, null, out _, out _) && !warning)
 			{
 				var toInsert = ((String)nameof(TypeConverters)).Add('.').AddRange(nameof(ListWithSingle)).Add('(')
 					.Repeat(DestinationDepth - SourceDepth);
@@ -486,7 +896,7 @@ public static class TypeConverters
 				&& (SourceLeafType.Equals(StringType) || SourceLeafType.Equals(UnsafeStringType))
 				&& DestinationLeafType.Equals(CharType)
 				|| SourceDepth <= DestinationDepth + 1 && SourceLeafType.Equals(RangeType)
-				&& DestinationLeafType.Equals(IntType) && TypesAreCompatible(ChainType,
+				&& DestinationLeafType.Equals(IntType) && TypesAreCompatible(C, ChainType,
 				new(IEnumerableBlockStack, [new("type", 0, []) { Extra = DestinationLeafType }]), out warning,
 				srcExpr?.Insert(0, nameof(Chain) + '(').Add(')'), out destExpr, out extraMessage))
 			{
@@ -532,7 +942,7 @@ public static class TypeConverters
 					&& sourceType.ExtraTypes[0].Name == "type" && sourceType.ExtraTypes[0].Extra is NStarType SourceSubtype
 					&& destinationType.ExtraTypes[0].Name == "type"
 					&& destinationType.ExtraTypes[0].Extra is NStarType DestinationSubtype
-					&& TypesAreCompatible(SourceSubtype, DestinationSubtype,
+					&& TypesAreCompatible(C, SourceSubtype, DestinationSubtype,
 					out warning, null, out _, out _)))
 					return false;
 				if (destinationType.ExtraTypes.Skip(1).Combine(sourceType.ExtraTypes.Skip(1), (x, y) =>
@@ -540,7 +950,7 @@ public static class TypeConverters
 					var warning3 = false;
 					var b = x.Name == "type" && x.Extra is NStarType LeftType
 					&& y.Name == "type" && y.Extra is NStarType RightType
-					&& TypesAreCompatible(LeftType, RightType, out warning3, null, out _, out _);
+					&& TypesAreCompatible(C, LeftType, RightType, out warning3, null, out _, out _);
 					warning2 |= warning3;
 					return b;
 				}).All(x => x))
@@ -570,7 +980,7 @@ public static class TypeConverters
 					destExpr = (String?)srcExpr;
 				return true;
 			}
-			else if (SourceDepth <= DestinationDepth && TypesAreCompatible(SourceLeafType, DestinationLeafType,
+			else if (SourceDepth <= DestinationDepth && TypesAreCompatible(C, SourceLeafType, DestinationLeafType,
 				out warning, null, out _, out _) && !warning)
 			{
 				destExpr = srcExpr ?? null;
@@ -594,8 +1004,8 @@ public static class TypeConverters
 			destExpr = srcExpr;
 			return true;
 		}
-		if (UserDefinedTypes.TryGetValue(SplitType(sourceType.MainType), out var userDefinedType)
-			&& userDefinedType.BaseType != NullType && TypesAreCompatible(userDefinedType.BaseType, destinationType,
+		if (C.UserDefinedTypes.TryGetValue(SplitType(sourceType.MainType), out var userDefinedType)
+			&& userDefinedType.BaseType != NullType && TypesAreCompatible(C, userDefinedType.BaseType, destinationType,
 			out warning, srcExpr, out destExpr, out extraMessage))
 			return true;
 		if (!BuiltInMemberCollections.ImplicitConversions.TryGetValue(sourceType.MainType, out var containerConversions))
@@ -715,438 +1125,5 @@ public static class TypeConverters
 		}
 		else
 			return ((String)"unchecked((").AddRange(destTypeConverter).AddRange(")(").AddRange(source).AddRange("))");
-	}
-
-	private static List<(NStarType Type, bool Warning)> GetCompatibleTypes((NStarType Type, bool Warning) source,
-		List<(NStarType Type, bool Warning)> blackList)
-	{
-		List<(NStarType Type, bool Warning)> compatibleTypes = new(16);
-		compatibleTypes.AddRange(ImplicitConversionsFromAnything.Convert(x => (x, source.Warning))
-			.Filter(x => !blackList.Contains(item: x)));
-		if (BuiltInMemberCollections.ImplicitConversions.TryGetValue(source.Type.MainType, out var containerConversions)
-			&& containerConversions.TryGetValue(source.Type.ExtraTypes, out var typeConversions))
-			compatibleTypes.AddRange(typeConversions.Convert(x => (x.DestType, x.Warning || source.Warning))
-				.Filter(x => !blackList.Contains(item: x)));
-		return compatibleTypes;
-	}
-
-	public static dynamic ListWithSingle<T>(T item)
-	{
-		if (item is bool b)
-			return new BitList([b]);
-		else
-			return new List<T>(item);
-	}
-
-	public static List<char> RandomVarName() => RedStarLinq.Fill(32, _ => (char)(random.Next(2) == 1
-		? random.Next('A', 'Z' + 1) : random.Next('a', 'z' + 1)));
-
-	private sealed class FullTypeEComparer : G.IEqualityComparer<NStarType>
-	{
-		public bool Equals(NStarType x, NStarType y) => x.MainType.Equals(y.MainType) && x.ExtraTypes.Equals(y.ExtraTypes);
-
-		public int GetHashCode(NStarType x) => x.MainType.GetHashCode() ^ x.ExtraTypes.GetHashCode();
-	}
-
-	public static Type TypeMapping(NStarType NStarType)
-	{
-		if (TypeEqualsToPrimitive(NStarType, "list", false))
-		{
-			if (NStarType.ExtraTypes.Length == 1)
-			{
-				if (NStarType.ExtraTypes[0].Name != "type" || NStarType.ExtraTypes[0].Extra is not NStarType InnerNStarType)
-					throw new InvalidOperationException();
-				var netType = TypeMapping(InnerNStarType);
-				return ConstructListType(netType);
-			}
-			else
-			{
-				if (NStarType.ExtraTypes[0].Name == "type"
-					|| !int.TryParse(NStarType.ExtraTypes[0].Name.ToString(), out var levelsCount) || levelsCount < 1
-					|| NStarType.ExtraTypes[^1].Name != "type"
-					|| NStarType.ExtraTypes[^1].Extra is not NStarType InnerNStarType)
-					throw new InvalidOperationException();
-				var netType = TypeMapping(InnerNStarType);
-				Type outputType;
-				if (netType == typeof(bool))
-					outputType = typeof(BitList);
-				else
-					outputType = typeof(List<>).MakeGenericType(netType);
-				for (var i = 1; i < levelsCount; i++)
-					outputType = typeof(List<>).MakeGenericType(outputType);
-				return outputType;
-			}
-		}
-		if (NStarType.MainType.Equals(FuncBlockStack))
-		{
-			List<Type> funcComponents = [];
-			if (NStarType.ExtraTypes[0].Name != "type" || NStarType.ExtraTypes[0].Extra is not NStarType InnerNStarType)
-				throw new InvalidOperationException();
-			var returnType = TypeMapping(InnerNStarType);
-			for (var i = 1; i < NStarType.ExtraTypes.Length; i++)
-			{
-				if (NStarType.ExtraTypes[i].Name != "type" || NStarType.ExtraTypes[i].Extra is not NStarType InnerNStarType2)
-					throw new InvalidOperationException();
-				funcComponents.Add(TypeMapping(InnerNStarType2));
-			}
-			return ConstructFuncType(returnType, funcComponents.GetSlice());
-		}
-		if (!TypeEqualsToPrimitive(NStarType, TupleName, false))
-		{
-			var split = SplitType(NStarType.MainType);
-			if (TypeExists(split, out var netType))
-			{
-				if (netType == typeof(Task<>)
-					&& (NStarType.ExtraTypes.Length == 0
-					|| NStarType.ExtraTypes.Length == 1 && NStarType.ExtraTypes[0].Name == "type"
-					&& NStarType.ExtraTypes[0].Extra is NStarType InnerNStarType && InnerNStarType.Equals(NullType)))
-					return typeof(Task);
-				else if (netType == typeof(ValueTask<>)
-					&& (NStarType.ExtraTypes.Length == 0
-					|| NStarType.ExtraTypes.Length == 1 && NStarType.ExtraTypes[0].Name == "type"
-					&& NStarType.ExtraTypes[0].Extra is NStarType ValueInnerNStarType && ValueInnerNStarType.Equals(NullType)))
-					return typeof(ValueTask);
-				else if (netType.ContainsGenericParameters)
-					return netType.MakeGenericType(NStarType.ExtraTypes.ToArray(TypeMapping));
-				else
-					return netType;
-			}
-			else if (Interfaces.TryGetValue((split.Container.ToString(), split.Type), out var @interface))
-			{
-				netType = @interface.DotNetType;
-				if (netType.ContainsGenericParameters)
-					return netType.MakeGenericType(NStarType.ExtraTypes.ToArray(TypeMapping));
-				else
-					return netType;
-			}
-			else if (NStarType.MainType.TryPeek(out var block) && block.BlockType == BlockType.Extra)
-			{
-				if (memoizedExtraTypes.TryGetValue(block.Name, out var memoized))
-					return memoized;
-				var assembly = EasyEval.CompileAndGetAssembly("class C<" + block.Name + ">{}class P{static void Main(){}}",
-					[], out var errors);
-				if (assembly is null || errors != "Compilation done without any error.\r\n")
-					throw new InvalidOperationException();
-				return memoizedExtraTypes[block.Name] = assembly.DefinedTypes.First().GetGenericArguments().First();
-			}
-			else
-				throw new InvalidOperationException();
-		}
-		if (NStarType.ExtraTypes.Length == 0)
-			return typeof(void);
-		List<Type> tupleComponents = [];
-		if (NStarType.ExtraTypes[0].Name != "type" || NStarType.ExtraTypes[0].Extra is not NStarType InnerNStarType3)
-			throw new InvalidOperationException();
-		var first = TypeMapping(InnerNStarType3);
-		if (NStarType.ExtraTypes.Length == 1)
-			return first;
-		var innerResult = first;
-		if (NStarType.ExtraTypes.Length == 2 && NStarType.ExtraTypes[1].Length == 0
-			&& int.TryParse(NStarType.ExtraTypes[1].Name.AsSpan(), out var tupleLength))
-			return ConstructTupleType(RedStarLinq.FillArray(innerResult, tupleLength).GetSlice());
-		for (var i = 1; i < NStarType.ExtraTypes.Length; i++)
-		{
-			if (NStarType.ExtraTypes[i].Name == "type" && NStarType.ExtraTypes[i].Extra is NStarType InnerNStarType2)
-			{
-				tupleComponents.Add(innerResult);
-				first = TypeMapping(InnerNStarType2);
-				innerResult = first;
-				continue;
-			}
-			innerResult = ConstructTupleType(RedStarLinq.FillArray(innerResult,
-				int.TryParse(NStarType.ExtraTypes[i].Name.ToString(), out var n) ? n : 1).GetSlice());
-		}
-		return ConstructTupleType(tupleComponents.Add(innerResult).GetSlice());
-	}
-
-	private static Type TypeMapping(TreeBranch branch)
-	{
-		if (branch.Name != "type" || branch.Extra is not NStarType NStarType)
-			throw new InvalidOperationException();
-		return TypeMapping(NStarType);
-	}
-
-	public static Type ConstructListType(Type netType)
-	{
-		if (netType == typeof(bool))
-			return typeof(BitList);
-		else
-			return typeof(List<>).MakeGenericType(netType);
-	}
-
-	public static Type ConstructFuncType(Type returnType)
-	{
-		if (returnType == typeof(void))
-			return typeof(Action);
-		return typeof(Func<>).MakeGenericType(returnType);
-	}
-
-	public static Type ConstructFuncType(Type returnType, Type paramType)
-	{
-		if (returnType == typeof(void))
-			return typeof(Action<>).MakeGenericType(paramType);
-		return typeof(Func<,>).MakeGenericType(paramType, returnType);
-	}
-
-	public static Type ConstructFuncType(Type returnType, Slice<Type> netTypes)
-	{
-		if (returnType == typeof(void))
-			return netTypes.Length switch
-			{
-				0 => typeof(Action),
-				1 => typeof(Action<>).MakeGenericType(netTypes[0]),
-				2 => typeof(Action<,>).MakeGenericType(netTypes[0], netTypes[1]),
-				3 => typeof(Action<,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2]),
-				4 => typeof(Action<,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3]),
-				5 => typeof(Action<,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4]),
-				6 => typeof(Action<,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
-					netTypes[5]),
-				7 => typeof(Action<,,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
-					netTypes[5], netTypes[6]),
-				8 => typeof(Action<,,,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
-					netTypes[5], netTypes[6], netTypes[7]),
-				_ => throw new InvalidOperationException(),
-			};
-		return netTypes.Length switch
-		{
-			0 => typeof(Func<>).MakeGenericType(returnType),
-			1 => typeof(Func<,>).MakeGenericType(netTypes[0], returnType),
-			2 => typeof(Func<,,>).MakeGenericType(netTypes[0], netTypes[1], returnType),
-			3 => typeof(Func<,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], returnType),
-			4 => typeof(Func<,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], returnType),
-			5 => typeof(Func<,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
-				returnType),
-			6 => typeof(Func<,,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
-				netTypes[5], returnType),
-			7 => typeof(Func<,,,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
-				netTypes[5], netTypes[6], returnType),
-			8 => typeof(Func<,,,,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
-				netTypes[5], netTypes[6], netTypes[7], returnType),
-			_ => throw new InvalidOperationException(),
-		};
-	}
-
-	public static Type ConstructTupleType(Slice<Type> netTypes) => netTypes.Length switch
-	{
-		0 => throw new InvalidOperationException(),
-		1 => typeof(ValueTuple<>).MakeGenericType(netTypes[0]),
-		2 => typeof(ValueTuple<,>).MakeGenericType(netTypes[0], netTypes[1]),
-		3 => typeof(ValueTuple<,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2]),
-		4 => typeof(ValueTuple<,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3]),
-		5 => typeof(ValueTuple<,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4]),
-		6 => typeof(ValueTuple<,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
-			netTypes[5]),
-		7 => typeof(ValueTuple<,,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
-			netTypes[5], netTypes[6]),
-		_ => typeof(ValueTuple<,,,,,,,>).MakeGenericType(netTypes[0], netTypes[1], netTypes[2], netTypes[3], netTypes[4],
-			netTypes[5], netTypes[6], ConstructTupleType(netTypes[7..])),
-	};
-
-	public static NStarType TypeMappingBack(Type netType, Type[] genericArguments, BranchCollection extraTypes)
-	{
-		if (netType.IsGenericParameter)
-		{
-			var genericArgumentsIndex = Array.IndexOf(genericArguments, netType);
-			if (genericArgumentsIndex < 0 || extraTypes.Length <= genericArgumentsIndex)
-				return new(new(new Block(BlockType.Extra, netType.Name, 1)), []);
-			else if (extraTypes[genericArgumentsIndex].Name != "type"
-				|| extraTypes[genericArgumentsIndex].Extra is not NStarType InnerNStarType)
-				throw new InvalidOperationException();
-			else
-				return InnerNStarType;
-		}
-		if (netType.IsSZArray || netType.IsPointer)
-			netType = typeof(List<>).MakeGenericType(netType.GetElementType() ?? throw new InvalidOperationException());
-		else if (netType == typeof(System.Collections.BitArray))
-			netType = typeof(BitList);
-		else if (netType == typeof(Index))
-			netType = typeof(int);
-		var typeGenericArguments = netType.GetGenericArguments();
-		if (netType.Name.Contains("Action"))
-		{
-			return new(FuncBlockStack, new([new TreeBranch("type", 0, []) { Extra = NullType },
-				.. typeGenericArguments.Convert((x, index) =>
-				new TreeBranch("type", 0, []) { Extra = TypeMappingBack(x, genericArguments, extraTypes) })]));
-		}
-		if (netType.Name.Contains(nameof(Func<>)))
-		{
-			return new(FuncBlockStack, new([typeGenericArguments[^1].Wrap(x =>
-				new TreeBranch("type", 0, []) 
-				{
-					Extra = TypeMappingBack(x.GetGenericArguments().Length != 0
-					&& x.GetGenericTypeDefinition() == typeof(ValueTask<>)
-					? x.GetGenericArguments()[0] : x, genericArguments, extraTypes) 
-				}), .. typeGenericArguments.GetSlice(..^1).Convert((x, index) =>
-				new TreeBranch("type", 0, []) { Extra = TypeMappingBack(x, genericArguments, extraTypes) })]));
-		}
-		if (netType.FullName is not null && netType.GetGenericArguments().Length == 1
-			&& typeof(G.IEnumerable<>).MakeGenericType(netType.GetGenericArguments()).IsAssignableFrom(netType)
-			&& extraTypes.Length == 2 && extraTypes[0].Name != "type" && extraTypes[0].Extra is null
-			&& int.TryParse(extraTypes[0].Name.AsSpan(), out var n))
-			return new(ListBlockStack, extraTypes);
-		int foundIndex;
-		if ((foundIndex = genericArguments.FindIndex(x => x.Name == netType.Name)) >= 0)
-			netType = TypeMapping(extraTypes[foundIndex]);
-		List<Type> innerTypes = [];
-		foreach (var genericArgument in netType.GenericTypeArguments)
-		{
-			if ((foundIndex = genericArguments.IndexOf(genericArgument)) < 0)
-				continue;
-			innerTypes.Add(TypeMapping(extraTypes[foundIndex]));
-		}
-		var oldNetType = netType;
-		if (netType.IsGenericType)
-			netType = netType.GetGenericTypeDefinition();
-		while (true)
-		{
-			if (CreateVar(PrimitiveTypes.Find(x => x.Value == netType).Key, out var typename) is not null)
-				return typename == "list" ? GetListType(TypeMappingBack(typeGenericArguments[0], genericArguments,
-					new(extraTypes.TakeLast(genericArguments.Length))))
-					: GetPrimitiveType(typename);
-			else if (netType == typeof(Task))
-				return new(TaskBlockStack, [new("type", 0, []) { Extra = NullType }]);
-			else if (netType == typeof(ValueTask))
-				return new(ValueTaskBlockStack, [new("type", 0, []) { Extra = NullType }]);
-			else if (ExtraTypes.TryGetKey(netType, out var type2) || ImportedTypes.TryGetKey(netType, out type2)
-				|| IOTypes.TryGetKey(netType, out type2))
-				return new(GetBlockStack(type2.Namespace + "." + type2.Type),
-					new([.. typeGenericArguments.Convert((x, index) =>
-					new TreeBranch("type", 0, []) { Extra = TypeMappingBack(x, genericArguments, extraTypes) })]));
-			else if (CreateVar(Interfaces.Find(x => x.Value.DotNetType == netType), out var type3).Key != default)
-				return new(GetBlockStack(type3.Key.Namespace + "." + type3.Key.Interface),
-					new([.. typeGenericArguments.Convert((x, index) =>
-					new TreeBranch("type", 0,[]) { Extra = TypeMappingBack(x, genericArguments, extraTypes) })]));
-			else if (netType == typeof(string))
-				return StringType;
-			else if (netType == typeof(BitList))
-				return GetListType(BoolType);
-			else if (innerTypes.Length != 0)
-			{
-				netType = netType.MakeGenericType([.. innerTypes]);
-				if (!netType.Name.Contains("Tuple") && !netType.Name.Contains("KeyValuePair"))
-				{
-					innerTypes.Clear();
-					continue;
-				}
-				return new(TupleBlockStack, new(netType.GenericTypeArguments.ToList(x =>
-					new TreeBranch("type", 0, []) { Extra = TypeMappingBack(x, genericArguments, extraTypes) })));
-			}
-			else if (!typeof(ITuple).IsAssignableFrom(oldNetType))
-				throw new InvalidOperationException();
-			break;
-		}
-		BranchCollection result = [];
-		var tupleTypes = new Queue<Type>();
-		tupleTypes.Enqueue(oldNetType);
-		while (tupleTypes.Length != 0 && tupleTypes.Dequeue() is Type tupleType)
-			foreach (var field in tupleType.GetFields())
-				if (field.Name == "Rest")
-					tupleTypes.Enqueue(tupleType);
-				else
-					result.Add(new("type", 0, []) { Extra = TypeMappingBack(field.FieldType, genericArguments, extraTypes) });
-		return new(TupleBlockStack, result);
-	}
-
-	public static bool IsAssignableFromExt(this Type destination, Type source) =>
-		destination.IsAssignableFrom(source) || destination == typeof(MpzT) && new[] { typeof(byte), typeof(short),
-		typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(MpzT) }.Contains(source)
-		|| destination == typeof(long) && new[] { typeof(byte),
-		typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long) }.Contains(source)
-		|| destination == typeof(int) && new[] { typeof(byte), typeof(short), typeof(ushort), typeof(int) }.Contains(source)
-		|| destination == typeof(short) && new[] { typeof(byte), typeof(short) }.Contains(source)
-		|| destination == typeof(ulong) && new[] { typeof(byte), typeof(ushort), typeof(uint), typeof(ulong) }.Contains(source)
-		|| destination == typeof(uint) && new[] { typeof(byte), typeof(ushort), typeof(uint) }.Contains(source)
-		|| destination == typeof(ushort) && new[] { typeof(byte), typeof(ushort) }.Contains(source);
-
-	public static NStarType ReplaceExtraType(NStarType originalType, (String ExtraType, NStarType TypeToInsert) pattern)
-	{
-		if (originalType.MainType.Length == 1 && originalType.MainType.Peek().BlockType == BlockType.Extra
-			&& originalType.MainType.Peek().Name == pattern.ExtraType && originalType.ExtraTypes.Length == 0)
-			return pattern.TypeToInsert;
-		else
-		{
-			return new(originalType.MainType, new(originalType.ExtraTypes
-				.ToList((x, index) => new G.KeyValuePair<String?, TreeBranch>(originalType.ExtraTypes.Keys
-				.TryGetKey(index, out var key) ? key : null, x.Name != "type"
-				|| x.Extra is not NStarType InnerNStarType ? new TreeBranch(x.Name, x.Pos, x.Container)
-				: new TreeBranch("type", x.Pos, x.Container)
-				{
-					Extra = ReplaceExtraType(InnerNStarType, pattern)
-				}))));
-		}
-	}
-
-	public static Type ReplaceExtraNetType(Type originalType, (Type ExtraType, Type TypeToInsert) pattern)
-	{
-		if (originalType.Name.Equals(pattern.ExtraType.Name))
-			return pattern.ExtraType.IsGenericMethodParameter || pattern.ExtraType.IsGenericParameter
-				? pattern.TypeToInsert : pattern.ExtraType;
-		else
-		{
-			var genericArguments = originalType.GetGenericArguments();
-			if (genericArguments.Length == 0)
-				return originalType;
-			return originalType.GetGenericTypeDefinition().MakeGenericType([.. genericArguments.Convert(x =>
-				ReplaceExtraNetType(x, pattern))]);
-		}
-	}
-
-	public static List<(Type ExtraType, Type TypeToInsert)> GetReplacementPatterns(Type[] genericArguments,
-		Type[] parameterTypes)
-	{
-		var length = Min(genericArguments.Length, parameterTypes.Length);
-		List<(Type ExtraType, Type TypeToInsert)> result = [];
-		for (var i = 0; i < length; i++)
-		{
-			var genericArgument = genericArguments[i];
-			var parameterType = parameterTypes[i];
-			if (parameterType == typeof(String))
-			{
-				result.Add((genericArgument, /*typeof(G.IEnumerable<>).IsAssignableFrom(genericArgument)
-					? */typeof(char)/* : typeof(String)*/));
-				continue;
-			}
-			if (!parameterType.IsGenericType)
-			{
-				if (parameterType != typeof(void))
-					result.Add((genericArgument, parameterType));
-				continue;
-			}
-			var parameterGenericArguments = parameterType.GetGenericTypeDefinition().GetGenericArguments();
-			var index = parameterGenericArguments.FindIndex(x => x.Name == genericArgument.Name);
-			if (index != -1)
-			{
-				result.Add((genericArgument, parameterType.GetGenericArguments()[index]));
-				continue;
-			}
-			result.AddRange(GetReplacementPatterns(genericArgument.GetGenericArguments(),
-				parameterType.GetGenericArguments()));
-		}
-		return result;
-	}
-
-	public static object? CastType(Type? type, dynamic value)
-	{
-		if (type is null || value is null)
-			return null;
-		if (value.GetType() == type)
-			return value;
-		var valueAsString = value.ToString();
-		if (type.IsEnum)
-		{
-			if (Enum.IsDefined(type, valueAsString))
-				return Enum.Parse(type, valueAsString);
-		}
-		if (type == typeof(bool))
-		{
-			return double.TryParse(valueAsString, out double doubleValue) && doubleValue >= 1
-				|| valueAsString == "true" || valueAsString == "on" || valueAsString == "checked";
-		}
-		else if (type == typeof(Uri))
-			return new Uri(Convert.ToString(valueAsString));
-		else if (type == typeof(String))
-			return (String)Convert.ChangeType(valueAsString, typeof(string));
-		else
-			return Convert.ChangeType(valueAsString, type);
 	}
 }

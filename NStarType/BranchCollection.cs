@@ -1,6 +1,4 @@
-﻿using System.Reflection;
-
-namespace PL051.NStar;
+﻿namespace PL051.NStar;
 
 [DebuggerDisplay("{ToString()}")]
 public class BranchCollection : List<TreeBranch>

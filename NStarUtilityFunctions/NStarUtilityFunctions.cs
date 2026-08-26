@@ -42,7 +42,7 @@ public static class NStarUtilityFunctions
 		if (x <= 1)
 			return 1;
 		else if (x > 170)
-			return 1d / 0;
+			return double.PositiveInfinity;
 		else
 		{
 			double n = 1;

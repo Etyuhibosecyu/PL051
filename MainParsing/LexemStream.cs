@@ -23,7 +23,7 @@ public class LexemStream
 	private protected readonly String input;
 	private protected List<String>? errors;
 	private readonly BlockStack? rootContainer;
-	private protected int errorOccurred, wreckOccurred;
+	private protected int errorOccurred;
 	private protected int pos;
 	private int prevPos;
 	private readonly Stack<Block> nestedBlocksChain = new();
@@ -35,6 +35,7 @@ public class LexemStream
 	private readonly TypeDictionary<int> actualConstructorIndexes = [];
 	private int unknownIndex = 1;
 	private int figureBk;
+	private protected BuiltInMemberCollections C = new();
 
 	private protected static readonly ImmutableArray<string> ClassStartLexemsList = ["\r\n", ";", "(", "{", "}"];
 	private protected static readonly ImmutableArray<string> StopLexemsList = ["\r\n", ";", "{", "}"];
@@ -59,9 +60,11 @@ public class LexemStream
 		blocksToJump = lexemStream.blocksToJump;
 		registeredTypes = lexemStream.registeredTypes;
 		parameterLists = lexemStream.parameterLists;
+		C = lexemStream.C;
 	}
 
-	public (List<Lexem> Lexems, String String, TreeBranch TopBranch, List<String>? ErrorsList, int errorOccurred) Parse()
+	public (List<Lexem> Lexems, String String, TreeBranch TopBranch, List<String>? ErrorsList, int errorOccurred,
+		BuiltInMemberCollections C) Parse()
 	{
 		PreParse();
 		return errorOccurred == 2 ? EmptySyntaxTree() : new MainParsing(this, errorOccurred).MainParse();
@@ -126,12 +129,12 @@ public class LexemStream
 		{
 			BlockStack container = new(nestedBlocksChain);
 			var unnamedIndex = (nestedBlocksChain.Length == 0) ? globalUnnamedIndex++ : nestedBlocksChain.Peek().UnnamedIndex++;
-			if (UserDefinedTypes.TryGetValue((container, "#RoundBracket#"), out var userDefinedType)
-				&& UnnamedTypeStartIndexes.TryGetValue(container, out var containerStartIndexes)
+			if (C.UserDefinedTypes.TryGetValue((container, "#RoundBracket#"), out var userDefinedType)
+				&& C.UnnamedTypeStartIndexes.TryGetValue(container, out var containerStartIndexes)
 				&& containerStartIndexes.Find(x => int.TryParse(x[1..].ToString(), out var otherUnnamedIndex)
 				&& otherUnnamedIndex == unnamedIndex) is var startIndex && startIndex is not null)
 			{
-				UserDefinedTypes.TryAdd((new BlockStack(nestedBlocksChain), startIndex), userDefinedType);
+				C.UserDefinedTypes.TryAdd((new BlockStack(nestedBlocksChain), startIndex), userDefinedType);
 				nestedBlocksChain.Push(new(BlockType.Class, startIndex, 1));
 			}
 			else
@@ -149,7 +152,7 @@ public class LexemStream
 			else
 			{
 				nestedBlocksChain.Pop();
-				UserDefinedTypes.Remove((new BlockStack(nestedBlocksChain), "#RoundBracket#"));
+				C.UserDefinedTypes.Remove((new BlockStack(nestedBlocksChain), "#RoundBracket#"));
 				figureBk--;
 			}
 			pos++;
@@ -206,7 +209,7 @@ public class LexemStream
 			GenerateMessage(0x900E, pos, name);
 			return;
 		}
-		else if (!ExplicitlyConnectedNamespaces.TryAdd(name))
+		else if (!C.ExplicitlyConnectedNamespaces.TryAdd(name))
 		{
 			GenerateMessage(0x900F, pos, name);
 			return;
@@ -249,7 +252,7 @@ public class LexemStream
 		}
 		GetFigureBracketAndSetBlock(BlockType.Namespace, name, 0, () =>
 		{
-			UserDefinedNamespaces.Add((container.Length != 0
+			C.UserDefinedNamespaces.Add((container.Length != 0
 				? ((String)container.ToString()).Add('.') : "").AddRange(name));
 			blocksToJump.Add((container, "Namespace", name, blockStart, pos));
 		});
@@ -318,13 +321,13 @@ public class LexemStream
 				registeredTypes.Add((container, name, pos3, --pos));
 			}
 			var unnamedIndex = (nestedBlocksChain.Length == 0) ? globalUnnamedIndex : nestedBlocksChain.Peek().UnnamedIndex;
-			UserDefinedTypes.TryAdd((container, name), new([], attributes, NullType, []));
+			C.UserDefinedTypes.TryAdd((container, name), new([], attributes, NullType, []));
 			var savedContainer = container;
 			SubscribeToChanges(name, savedContainer);
-			if (!UnnamedTypeStartIndexes.TryGetValue(container, out var containerStartIndexes))
+			if (!C.UnnamedTypeStartIndexes.TryGetValue(container, out var containerStartIndexes))
 			{
 				containerStartIndexes = [];
-				UnnamedTypeStartIndexes.Add(container, containerStartIndexes);
+				C.UnnamedTypeStartIndexes.Add(container, containerStartIndexes);
 			}
 			String startIndex = "#" + unnamedIndex;
 			containerStartIndexes.Add(startIndex);
@@ -343,7 +346,7 @@ public class LexemStream
 			var s = lexems[pos].String;
 			if (PrimitiveTypes.ContainsKey(s) || ExtraTypes.ContainsKey(("", s)))
 				ChangeNameAndGenerateError(0x0006, out name, s);
-			else if (UserDefinedTypes.ContainsKey((container, s)))
+			else if (C.UserDefinedTypes.ContainsKey((container, s)))
 				ChangeNameAndGenerateError(0x0007, out name, s);
 			else
 				CheckAdditionalNameConditions(0x0008, out name, s, s);
@@ -367,7 +370,7 @@ public class LexemStream
 		}
 		GetFigureBracketAndSetBlock(blockType, name, attributes, () =>
 		{
-			UserDefinedTypes.Add((container, name), new([], attributes, NullType, []));
+			C.UserDefinedTypes.Add((container, name), new([], attributes, NullType, []));
 			blocksToJump.Add((container, blockType.ToString(), name, blockStart, prevPos));
 		});
 	}
@@ -403,13 +406,13 @@ public class LexemStream
 				return;
 			}
 			var unnamedIndex = (nestedBlocksChain.Length == 0) ? globalUnnamedIndex : nestedBlocksChain.Peek().UnnamedIndex;
-			UserDefinedTypes.TryAdd((container, name), new([], attributes, NullType, []));
+			C.UserDefinedTypes.TryAdd((container, name), new([], attributes, NullType, []));
 			var savedContainer = container;
 			SubscribeToChanges(name, savedContainer);
-			if (!UnnamedTypeStartIndexes.TryGetValue(container, out var containerStartIndexes))
+			if (!C.UnnamedTypeStartIndexes.TryGetValue(container, out var containerStartIndexes))
 			{
 				containerStartIndexes = [];
-				UnnamedTypeStartIndexes.Add(container, containerStartIndexes);
+				C.UnnamedTypeStartIndexes.Add(container, containerStartIndexes);
 			}
 			String startIndex = "#" + unnamedIndex;
 			containerStartIndexes.Add(startIndex);
@@ -428,7 +431,7 @@ public class LexemStream
 			var s = lexems[pos].String;
 			if (PrimitiveTypes.ContainsKey(s) || ExtraTypes.ContainsKey(("", s)) || ImportedTypes.ContainsKey(("", s)))
 				ChangeNameAndGenerateError(0x0006, out name, s);
-			else if (UserDefinedTypes.ContainsKey((container, s)))
+			else if (C.UserDefinedTypes.ContainsKey((container, s)))
 				ChangeNameAndGenerateError(0x0007, out name, s);
 			else
 				CheckAdditionalNameConditions(0x0008, out name, s, s);
@@ -468,7 +471,7 @@ public class LexemStream
 			GenerateMessage(0x0015, pos);
 		GetFigureBracketAndSetBlock(BlockType.Struct, name, attributes, () =>
 		{
-			UserDefinedTypes.Add((container, name), new([], attributes, NullType, []));
+			C.UserDefinedTypes.Add((container, name), new([], attributes, NullType, []));
 			blocksToJump.Add((container, nameof(Record), name, blockStart, pos));
 		});
 	}
@@ -503,7 +506,7 @@ public class LexemStream
 			var s = lexems[pos].String;
 			if (PrimitiveTypes.ContainsKey(s) || ExtraTypes.ContainsKey(("", s)))
 				ChangeNameAndGenerateError(0x0006, out name, s);
-			else if (UserDefinedTypes.ContainsKey((container, s)))
+			else if (C.UserDefinedTypes.ContainsKey((container, s)))
 				ChangeNameAndGenerateError(0x0007, out name, s);
 			else
 				CheckAdditionalNameConditions(0x0008, out name, s, s);
@@ -525,32 +528,32 @@ public class LexemStream
 		}
 		GetFigureBracketAndSetBlock(BlockType.Class, name, attributes, () =>
 		{
-			UserDefinedTypes.Add((container, name), new([], attributes, NullType, []));
+			C.UserDefinedTypes.Add((container, name), new([], attributes, NullType, []));
 			blocksToJump.Add((container, nameof(BlockType.Enum), name, blockStart, prevPos));
 		});
 	}
 
-	protected static void SubscribeToChanges(String name, BlockStack container) => name.ListChanged += s =>
+	protected void SubscribeToChanges(String name, BlockStack container) => name.ListChanged += s =>
 	{
 		if (s.Length == 0)
 			return;
-		UserDefinedTypes[(container, s)] = UserDefinedTypes
+		C.UserDefinedTypes[(container, s)] = C.UserDefinedTypes
 			.Find(x => x.Key.Container.Equals(container) && x.Key.Type == s).Value;
-		var nestedTypes = UserDefinedTypes.FindAll(x => x.Key.Container.Any(y => y.Name == s));
+		var nestedTypes = C.UserDefinedTypes.FindAll(x => x.Key.Container.Any(y => y.Name == s));
 		foreach (var x in nestedTypes)
-			UserDefinedTypes[x.Key] = x.Value;
-		var properties = UserDefinedProperties.FindAll(x => x.Key.Any(y => y.Name == s));
+			C.UserDefinedTypes[x.Key] = x.Value;
+		var properties = C.UserDefinedProperties.FindAll(x => x.Key.Any(y => y.Name == s));
 		foreach (var x in properties)
-			UserDefinedProperties[x.Key] = x.Value;
-		var functions = BuiltInMemberCollections.UserDefinedMethods.FindAll(x => x.Key.Any(y => y.Name == s));
+			C.UserDefinedProperties[x.Key] = x.Value;
+		var functions = C.UserDefinedMethods.FindAll(x => x.Key.Any(y => y.Name == s));
 		foreach (var x in functions)
-			BuiltInMemberCollections.UserDefinedMethods[x.Key] = x.Value;
-		var functionIndexes = UserDefinedFunctionIndexes.FindAll(x => x.Key.Any(y => y.Name == s));
+			C.UserDefinedMethods[x.Key] = x.Value;
+		var functionIndexes = C.UserDefinedFunctionIndexes.FindAll(x => x.Key.Any(y => y.Name == s));
 		foreach (var x in functionIndexes)
-			UserDefinedFunctionIndexes[x.Key] = x.Value;
-		var constructors = UserDefinedConstructors.FindAll(x => x.Key.Any(y => y.Name == s));
+			C.UserDefinedFunctionIndexes[x.Key] = x.Value;
+		var constructors = C.UserDefinedConstructors.FindAll(x => x.Key.Any(y => y.Name == s));
 		foreach (var x in constructors)
-			UserDefinedConstructors[x.Key] = x.Value;
+			C.UserDefinedConstructors[x.Key] = x.Value;
 		SubscribeToChanges(s, container);
 	};
 
@@ -651,8 +654,8 @@ public class LexemStream
 		}
 		GetFigureBracketAndSetBlock(BlockType.Function, name, attributes, () =>
 		{
-			BuiltInMemberCollections.UserDefinedMethods.TryAdd(container, []);
-			var containerFunctions = BuiltInMemberCollections.UserDefinedMethods[container];
+			C.UserDefinedMethods.TryAdd(container, []);
+			var containerFunctions = C.UserDefinedMethods[container];
 			if (!containerFunctions.TryGetValue(name, out var nameFunctions))
 			{
 				nameFunctions = [];
@@ -668,10 +671,10 @@ public class LexemStream
 				? name : RandomVarName().ToNString(), [],
 				(new([new(BlockType.Primitive, "???", 1)]), NoBranches), attributes, [], null));
 			blocksToJump.Add((container, nameof(Function), name, blockStart, pos));
-			if (!(UserDefinedFunctionIndexes.TryGetValue(container, out var containerIndexes)
+			if (!(C.UserDefinedFunctionIndexes.TryGetValue(container, out var containerIndexes)
 				&& actualFunctionIndexes.TryGetValue(container, out var dic)))
 			{
-				UserDefinedFunctionIndexes[container] = new() { { blockStart, 0 } };
+				C.UserDefinedFunctionIndexes[container] = new() { { blockStart, 0 } };
 				actualFunctionIndexes[container] = new() { { name, 1 } };
 			}
 			else if (!dic.TryGetValue(name, out var index))
@@ -735,10 +738,10 @@ public class LexemStream
 		}
 		GetFigureBracketAndSetBlock(BlockType.Constructor, "", attributes, () =>
 		{
-			UserDefinedConstructors.TryAdd(container, []);
-			UserDefinedConstructors[container].Add(new(attributes, [], [-1], null));
+			C.UserDefinedConstructors.TryAdd(container, []);
+			C.UserDefinedConstructors[container].Add(new(attributes, [], [-1], null));
 			blocksToJump.Add((container, nameof(Constructor), "", blockStart, pos));
-			if (UserDefinedConstructorIndexes.TryGetValue(container, out var containerConstructorIndexes)
+			if (C.UserDefinedConstructorIndexes.TryGetValue(container, out var containerConstructorIndexes)
 				&& actualConstructorIndexes.TryGetValue(container, out var index))
 			{
 				containerConstructorIndexes.Add(blockStart, index);
@@ -746,7 +749,7 @@ public class LexemStream
 			}
 			else
 			{
-				UserDefinedConstructorIndexes[container] = new() { { blockStart, 0 } };
+				C.UserDefinedConstructorIndexes[container] = new() { { blockStart, 0 } };
 				actualConstructorIndexes[container] = 1;
 			}
 		});
@@ -829,14 +832,15 @@ public class LexemStream
 		lexems[pos - 1].LineN, lexems[pos - 1].Pos + lexems[pos - 1].String.Length);
 
 	public (List<Lexem> Lexems, String String, TreeBranch TopBranch, List<String>? ErrorsList,
-		int errorOccurred) EmptySyntaxTree() => (lexems, input, TreeBranch.DoNotAdd(), errors, errorOccurred);
+		int errorOccurred, BuiltInMemberCollections C) EmptySyntaxTree() =>
+		(lexems, input, TreeBranch.DoNotAdd(), errors, errorOccurred, C);
 
 	private bool IsClass() => nestedBlocksChain.Length != 0 && nestedBlocksChain.TryPeek(out var block)
 		&& (block.BlockType is BlockType.Class or BlockType.Struct || block.BlockType == BlockType.Unnamed
-		&& UserDefinedTypes.ContainsKey((new(nestedBlocksChain.SkipLast(1)), "#RoundBracket#")));
+		&& C.UserDefinedTypes.ContainsKey((new(nestedBlocksChain.SkipLast(1)), "#RoundBracket#")));
 
 	private bool IsStatic() =>
-		(UserDefinedTypes[SplitType(nestedBlocksChain)].Attributes & TypeAttributes.Static) == TypeAttributes.Static;
+		(C.UserDefinedTypes[SplitType(nestedBlocksChain)].Attributes & TypeAttributes.Static) == TypeAttributes.Static;
 
 	private void GetBlockStart()
 	{
@@ -1031,11 +1035,12 @@ public class LexemStream
 		| TypeAttributes.Static | TypeAttributes.Struct | TypeAttributes.Enum
 		| TypeAttributes.Delegate)) is TypeAttributes.None or TypeAttributes.Abstract;
 
-	public static implicit operator LexemStream((List<Lexem> Lexems, String String, List<String> ErrorsList, int ErrorOccurred) x) => new(x.Lexems, x.String, x.ErrorsList, x.ErrorOccurred);
+	public static implicit operator LexemStream((List<Lexem> Lexems, String String, List<String> ErrorsList,
+		int ErrorOccurred) x) => new(x.Lexems, x.String, x.ErrorsList, x.ErrorOccurred);
 
-	public static implicit operator LexemStream(((List<Lexem> Lexems, String String, List<String> ErrorsList, int ErrorOccurred) Main, BlockStack? RootContainer) x) => new(x.Main.Lexems, x.Main.String, x.Main.ErrorsList, x.Main.ErrorOccurred, x.RootContainer);
+	public static implicit operator LexemStream(CodeSample x) => ((List<Lexem> Lexems, String String, List<String> ErrorsList,
+		int ErrorOccurred))x;
 
-	public static implicit operator LexemStream(CodeSample x) => ((List<Lexem> Lexems, String String, List<String> ErrorsList, int ErrorOccurred))x;
-
-	public static implicit operator (List<Lexem> Lexems, String String, TreeBranch TopBranch, List<String>? ErrorsList, int ErrorOccurred)(LexemStream x) => x.Parse();
+	public static implicit operator (List<Lexem> Lexems, String String, TreeBranch TopBranch, List<String>? ErrorsList,
+		int ErrorOccurred, BuiltInMemberCollections C)(LexemStream x) => x.Parse();
 }

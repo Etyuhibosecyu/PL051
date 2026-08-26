@@ -642,11 +642,13 @@ public class CodeSample(String newString)
 				{
 					lexemType = LexemType.OtherNumber;
 					numberParts[^1].Add('r');
+					return true;
 				}
 				else if (ValidateChar('m'))
 				{
 					lexemType = LexemType.OtherNumber;
 					numberParts[^1].Add('m');
+					return true;
 				}
 				else if (!ulong.TryParse(numberParts[0].AsSpan(), out _))
 				{

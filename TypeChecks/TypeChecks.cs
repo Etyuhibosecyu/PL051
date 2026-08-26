@@ -36,13 +36,13 @@ public static class TypeChecks
 		return false;
 	}
 
-	public static bool ExtraTypeExists(BlockStack container, String name, out bool @class)
+	public static bool ExtraTypeExists(this BuiltInMemberCollections C, BlockStack container, String name, out bool @class)
 	{
 		@class = false;
-		if (container.Length != 0 && UserDefinedTypes.TryGetValue(SplitType(container), out var userDefinedType)
+		if (container.Length != 0 && C.UserDefinedTypes.TryGetValue(SplitType(container), out var userDefinedType)
 			&& (userDefinedType.Restrictions?.Exists(x => x.Name == name) ?? false))
 			return true;
-		if (UserDefinedConstants.TryGetValue(container, out var containerConstants)
+		if (C.UserDefinedConstants.TryGetValue(container, out var containerConstants)
 			&& containerConstants.TryGetValue(name, out var constant))
 		{
 			if (TypeIsPrimitive(constant.NStarType.MainType) && constant.NStarType.MainType.TryPeek(out var block)
@@ -57,10 +57,10 @@ public static class TypeChecks
 				return true;
 			}
 		}
-		if (Variables.TryGetValue(container, out var containerVariables)
+		if (C.Variables.TryGetValue(container, out var containerVariables)
 			&& containerVariables.TryGetValue(name, out var variableType))
 			return TypeIsPrimitive(variableType.MainType) && variableType.MainType.Peek().Name == RecursiveTypeName;
-		return UserDefinedProperties.TryGetValue(container, out var containerProperties)
+		return C.UserDefinedProperties.TryGetValue(container, out var containerProperties)
 			&& containerProperties.TryGetValue(name, out var a)
 			&& TypeIsPrimitive(a.NStarType.MainType) && a.NStarType.MainType.Peek().Name == RecursiveTypeName
 			&& a.NStarType.ExtraTypes.Length == 0;
@@ -102,30 +102,29 @@ public static class TypeChecks
 		return (int)total;
 	}
 
-
-	public static bool IsEqualOrDerived(NStarType derived, NStarType @base)
+	public static bool IsEqualOrDerived(this BuiltInMemberCollections C, NStarType derived, NStarType @base)
 	{
 		if (derived.Equals(@base) || @base.Equals(ObjectType))
 			return true;
 		String foundName = default!;
 		if (@base.MainType.TryPeek(out var block) && block.BlockType == BlockType.Extra
-			&& CheckContainer(@base.MainType, stack => TempTypes.TryGetValue(stack, out var containerTempTypes)
+			&& CheckContainer(@base.MainType, stack => C.TempTypes.TryGetValue(stack, out var containerTempTypes)
 			&& containerTempTypes.Find(x => x.Name == block.Name) is var found && (foundName = found.Name) is not null, out _)
 			&& derived.MainType.TryPeek(out block) && block.BlockType == BlockType.Extra
-			&& CheckContainer(derived.MainType, stack => TempTypes.TryGetValue(stack, out var containerTempTypes)
-			&& containerTempTypes.Any(x => x.Name == block.Name && Variables.TryGetValue(stack, out var containerVariables)
+			&& CheckContainer(derived.MainType, stack => C.TempTypes.TryGetValue(stack, out var containerTempTypes)
+			&& containerTempTypes.Any(x => x.Name == block.Name && C.Variables.TryGetValue(stack, out var containerVariables)
 			&& containerVariables.TryGetValue(x.Name, out var VariableNStarType)
 			&& VariableNStarType.MainType.Equals(RecursiveBlockStack) && VariableNStarType.ExtraTypes.Length == 1
 			&& VariableNStarType.ExtraTypes[0].Name == "type"
 			&& VariableNStarType.ExtraTypes[0].Extra is NStarType BaseNStarType
 			&& BaseNStarType.Equals(@base)), out _))
 			return true;
-		if (IsEqualOrDerivedNetType(derived, @base))
+		if (IsEqualOrDerivedNetType(C, derived, @base))
 			return true;
 		var type = derived;
 		while (!type.Equals(NullType))
 		{
-			if (!UserDefinedTypes.TryGetValue(SplitType(derived.MainType), out var userDefinedType))
+			if (!C.UserDefinedTypes.TryGetValue(SplitType(derived.MainType), out var userDefinedType))
 				return false;
 			type = userDefinedType.BaseType;
 			if (type.MainType.Equals(@base.MainType))
@@ -134,7 +133,7 @@ public static class TypeChecks
 		return false;
 	}
 
-	private static bool IsEqualOrDerivedNetType(NStarType sourceType, NStarType destinationType)
+	private static bool IsEqualOrDerivedNetType(this BuiltInMemberCollections C, NStarType sourceType, NStarType destinationType)
 	{
 		if (sourceType.MainType.TryPeek(out var sourceBlock))
 		{
@@ -170,7 +169,7 @@ public static class TypeChecks
 				return true;
 			return false;
 		}
-		foreach (var x in ExplicitlyConnectedNamespaces)
+		foreach (var x in C.ExplicitlyConnectedNamespaces)
 		{
 			if (!(ExtraTypes.TryGetValue((x,
 				sourceType.MainType.TryPeek(out sourceBlock) ? sourceBlock.Name : ""), out var sourceNetType)
@@ -215,7 +214,7 @@ public static class TypeChecks
 		return false;
 	}
 
-	public static bool IsGUIType(NStarType container)
+	public static bool IsGUIType(this BuiltInMemberCollections C, NStarType container)
 	{
 		var mainType = container.MainType;
 		if (mainType.Length == 0)
@@ -224,11 +223,11 @@ public static class TypeChecks
 		if (split.Container.StartsWith(GetNamespaceStack(SystemGUI))
 			&& IOTypes.TryGetValue((split.Container.ToString(), split.Type), out _))
 			return true;
-		else if (UserDefinedTypes.TryGetValue(SplitType(container.MainType), out var userDefinedType))
+		else if (C.UserDefinedTypes.TryGetValue(SplitType(container.MainType), out var userDefinedType))
 		{
 			if (userDefinedType.BaseType.Equals(container))
 				return false;
-			if (IsGUIType(userDefinedType.BaseType))
+			if (IsGUIType(C, userDefinedType.BaseType))
 				return true;
 		}
 		return false;
@@ -324,14 +323,14 @@ public static class TypeChecks
 	public static bool IsReservedMember(BlockStack type, String member) => ReservedMembers.TryGetValue(type, out var containerMembers)
 			&& containerMembers.Contains(member);
 
-	public static bool TryGetSingularTupleSizeLimit(NStarType type, [MaybeNullWhen(false)] out int limit)
+	public static bool TryGetSingularTupleSizeLimit(this BuiltInMemberCollections C, NStarType type, [MaybeNullWhen(false)] out int limit)
 	{
 		if (type.Equals(BoolType))
 		{
 			limit = 1000_000_000;
 			return true;
 		}
-		else if (TryGetTypeSize(type, out var size))
+		else if (TryGetTypeSize(C, type, out var size))
 		{
 			limit = 128_000_000 / size;
 			return true;
@@ -343,7 +342,7 @@ public static class TypeChecks
 		}
 	}
 
-	public static bool TryGetTypeSize(NStarType type, [MaybeNullWhen(false)] out int size)
+	public static bool TryGetTypeSize(this BuiltInMemberCollections C, NStarType type, [MaybeNullWhen(false)] out int size)
 	{
 		if (!type.MainType.TryPeek(out var block))
 		{
@@ -351,7 +350,7 @@ public static class TypeChecks
 			return false;
 		}
 		else if (block.BlockType == BlockType.Class
-			&& UserDefinedTypes.TryGetValue(SplitType(type.MainType), out var userDefinedType)
+			&& C.UserDefinedTypes.TryGetValue(SplitType(type.MainType), out var userDefinedType)
 			&& (userDefinedType.Attributes & TypeAttributes.Delegate)
 			is 0 or TypeAttributes.Sealed or TypeAttributes.Abstract or TypeAttributes.Static)
 		{
@@ -359,12 +358,12 @@ public static class TypeChecks
 			return true;
 		}
 		else if (block.BlockType == BlockType.Enum
-			&& UserDefinedTypes.TryGetValue(SplitType(type.MainType), out userDefinedType)
+			&& C.UserDefinedTypes.TryGetValue(SplitType(type.MainType), out userDefinedType)
 			&& !userDefinedType.BaseType.Equals(NullType))
-			return TryGetTypeSize(userDefinedType.BaseType, out size);
+			return TryGetTypeSize(C, userDefinedType.BaseType, out size);
 		else if (block.BlockType != BlockType.Primitive)
 		{
-			if (TypeExists(SplitType(type.MainType), out var netType) && GetTypeSize(netType) is var netSize && netSize > 0)
+			if (TypeExists(C, SplitType(type.MainType), out var netType) && GetTypeSize(netType) is var netSize && netSize > 0)
 			{
 				size = netSize;
 				return true;
@@ -398,7 +397,7 @@ public static class TypeChecks
 		else if (type.ExtraTypes.Length == 2
 			&& type.ExtraTypes[0].Name == "type" && type.ExtraTypes[0].Extra is NStarType ItemNStarType
 			&& type.ExtraTypes[1].Length == 0 && int.TryParse(type.ExtraTypes[1].Name.AsSpan(), out var number)
-			&& TryGetTypeSize(ItemNStarType, out var itemSize))
+			&& TryGetTypeSize(C, ItemNStarType, out var itemSize))
 		{
 			size = itemSize * number;
 			if (ItemNStarType.Equals(BoolType))
@@ -410,7 +409,7 @@ public static class TypeChecks
 			size = 0;
 			foreach (var item in type.ExtraTypes)
 			{
-				if (item.Name == "type" && item.Extra is NStarType NStarType && TryGetTypeSize(NStarType, out itemSize))
+				if (item.Name == "type" && item.Extra is NStarType NStarType && TryGetTypeSize(C, NStarType, out itemSize))
 					size += itemSize;
 				else
 					size += 128;
@@ -419,7 +418,7 @@ public static class TypeChecks
 		}
 	}
 
-	public static bool TypeExists((BlockStack Container, String Type) containerType, [MaybeNullWhen(false)] out Type netType)
+	public static bool TypeExists(this BuiltInMemberCollections C, (BlockStack Container, String Type) containerType, [MaybeNullWhen(false)] out Type netType)
 	{
 		if (PrimitiveTypes.TryGetValue(containerType.Type, out netType))
 			return true;
@@ -445,9 +444,9 @@ public static class TypeChecks
 		Type? preservedNetType = null;
 		if (containerType.Container.Length != 0)
 			return false;
-		if (ExplicitlyConnectedNamespaces
+		if (C.ExplicitlyConnectedNamespaces
 			.FindIndex(x => ExtraTypes.TryGetValue((x, containerType.Type), out preservedNetType)) < 0
-			&& ExplicitlyConnectedNamespaces
+			&& C.ExplicitlyConnectedNamespaces
 			.FindIndex(x => ImportedTypes.TryGetValue((x, containerType.Type), out preservedNetType)) < 0)
 			return false;
 		if (preservedNetType is null)

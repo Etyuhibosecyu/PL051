@@ -14,12 +14,12 @@ namespace PL051.NStar;
 
 public static class MemberConverters
 {
-	public static String FunctionMapping(String function, List<NStarType> parameterTypes, List<String>? parameters,
-		String? typeParametersCache)
+	public static String FunctionMapping(this BuiltInMemberCollections C, String function,
+		List<NStarType> parameterTypes, List<String>? parameters, String? typeParametersCache)
 	{
 		var result = function.ToString() switch
 		{
-			"Add" => parameterTypes.Length != 0 && GetSubtype(parameterTypes[0]) == NullType
+			"Add" => parameterTypes.Length != 0 && GetSubtype(C, parameterTypes[0]) == NullType
 				&& !TypeEqualsToPrimitive(parameterTypes[0], TupleName, false)
 				? nameof(function.Add) : nameof(function.AddRange),
 			"Ceil" => "(int)" + nameof(Ceiling),

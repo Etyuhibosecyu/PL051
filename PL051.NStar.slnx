@@ -25,14 +25,16 @@
 	<Project Path="MainParsing/MainParsing.csproj" />
 	<Project Path="MemberChecks/MemberChecks.csproj" />
 	<Project Path="MemberConverters/MemberConverters.csproj" />
-	<Project Path="NStarEntity/NStarEntity.csproj" />
 	<Project Path="NStarType/NStarType.csproj" />
 	<Project Path="NStarUtilityFunctions/NStarUtilityFunctions.csproj" />
-	<Project Path="QuotesAndTreeBranch/QuotesAndTreeBranch.csproj" />
-	<Project Path="SemanticTree/SemanticTree.csproj" />
-	<Project Path="TypeChecks/TypeChecks.csproj" />
-	<Project Path="TypeConverters/TypeConverters.csproj" />
+	<Project Path="ObjectConverters/ObjectConverters.csproj" />
 	<Project Path="PL051.NStar.Desktop/PL051.NStar.Desktop.csproj" />
 	<Project Path="PL051.NStar.Tests/PL051.NStar.Tests.csproj" />
 	<Project Path="PL051.NStar/PL051.NStar.csproj" />
+	<Project Path="QuotesAndTreeBranch/QuotesAndTreeBranch.csproj" />
+	<Project Path="SemanticTree/SemanticTree.csproj" />
+	<Project Path="TranslateTimeOperations/TranslateTimeOperations.csproj" />
+	<Project Path="TypeChecks/TypeChecks.csproj" />
+	<Project Path="TypeConverters/TypeConverters.csproj" />
+	<Project Path="TypePromotionRules/TypePromotionRules.csproj" />
 </Solution>
