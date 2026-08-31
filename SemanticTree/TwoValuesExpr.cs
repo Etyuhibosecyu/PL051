@@ -137,16 +137,11 @@ internal record class TwoValuesExpr(BuiltInMemberCollections C, object Value1, o
 	private String TranslateTimeMulExpr(ref List<String>? errors, ref int i, NStarType LeftNStarType, NStarType RightNStarType,
 		NStarType PrevNStarType)
 	{
-		if (!(TypeIsPrimitive(LeftNStarType.MainType) && LeftNStarType.MainType.Peek().Name.AsSpan() is NullString
-			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
-			or CharTypeName or IntTypeName or UnsignedIntTypeName
-			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
-			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName
-			&& TypeIsPrimitive(RightNStarType.MainType) && RightNStarType.MainType.Peek().Name.AsSpan() is NullString
-			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
-			or CharTypeName or IntTypeName or UnsignedIntTypeName
-			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
-			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName))
+		if (!(TypeIsPrimitive(LeftNStarType.MainType) && TypeIsPrimitive(RightNStarType.MainType)
+			&& (LeftNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName or StringTypeName
+			|| IsNumeric(LeftNStarType.MainType.Peek().Name.AsSpan()))
+			&& (RightNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName or StringTypeName
+			|| IsNumeric(RightNStarType.MainType.Peek().Name.AsSpan()))))
 		{
 			GenerateMessage(ref errors, 0x4006, Branch[i].Pos, Branch[i].Name, LeftNStarType, RightNStarType);
 			return Default;
@@ -171,16 +166,11 @@ internal record class TwoValuesExpr(BuiltInMemberCollections C, object Value1, o
 	private String TranslateTimeDivExpr(ref List<String>? errors, ref int i, NStarType LeftNStarType, NStarType RightNStarType,
 		NStarType PrevNStarType)
 	{
-		if (!(TypeIsPrimitive(LeftNStarType.MainType) && LeftNStarType.MainType.Peek().Name.AsSpan() is NullString
-			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
-			or CharTypeName or IntTypeName or UnsignedIntTypeName
-			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
-			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName
-			&& TypeIsPrimitive(RightNStarType.MainType) && RightNStarType.MainType.Peek().Name.AsSpan() is ByteTypeName
-			or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
-			or CharTypeName or IntTypeName or UnsignedIntTypeName
-			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
-			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName))
+		if (!(TypeIsPrimitive(LeftNStarType.MainType) && TypeIsPrimitive(RightNStarType.MainType)
+			&& (LeftNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName
+			|| IsNumeric(LeftNStarType.MainType.Peek().Name.AsSpan()))
+			&& (RightNStarType.MainType.Peek().Name.AsSpan() is BoolTypeName
+			|| IsNumeric(RightNStarType.MainType.Peek().Name.AsSpan()))))
 		{
 			GenerateMessage(ref errors, 0x4006, Branch[i].Pos, Branch[i].Name, LeftNStarType, RightNStarType);
 			return Default;
@@ -212,16 +202,11 @@ internal record class TwoValuesExpr(BuiltInMemberCollections C, object Value1, o
 	private String TranslateTimeModExpr(ref List<String>? errors, ref int i, NStarType LeftNStarType, NStarType RightNStarType,
 		NStarType PrevNStarType)
 	{
-		if (!(TypeIsPrimitive(LeftNStarType.MainType) && LeftNStarType.MainType.Peek().Name.AsSpan() is NullString
-			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
-			or CharTypeName or IntTypeName or UnsignedIntTypeName
-			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
-			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName
-			&& TypeIsPrimitive(RightNStarType.MainType) && RightNStarType.MainType.Peek().Name.AsSpan() is ByteTypeName
-			or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
-			or CharTypeName or IntTypeName or UnsignedIntTypeName
-			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
-			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName))
+		if (!(TypeIsPrimitive(LeftNStarType.MainType) && TypeIsPrimitive(RightNStarType.MainType)
+			&& (LeftNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName
+			|| IsNumeric(LeftNStarType.MainType.Peek().Name.AsSpan()))
+			&& (RightNStarType.MainType.Peek().Name.AsSpan() is BoolTypeName
+			|| IsNumeric(RightNStarType.MainType.Peek().Name.AsSpan()))))
 		{
 			GenerateMessage(ref errors, 0x4006, Branch[i].Pos, Branch[i].Name, LeftNStarType, RightNStarType);
 			return Default;
@@ -253,18 +238,11 @@ internal record class TwoValuesExpr(BuiltInMemberCollections C, object Value1, o
 	private String TranslateTimePlusExpr(ref List<String>? errors, ref int i, NStarType LeftNStarType, NStarType RightNStarType,
 		NStarType PrevNStarType)
 	{
-		if (!(TypeIsPrimitive(LeftNStarType.MainType)
-			&& LeftNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName
-			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
-			or CharTypeName or IntTypeName or UnsignedIntTypeName
-			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
-			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName
-			&& TypeIsPrimitive(RightNStarType.MainType)
-			&& RightNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName
-			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
-			or CharTypeName or IntTypeName or UnsignedIntTypeName
-			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
-			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName))
+		if (!(TypeIsPrimitive(LeftNStarType.MainType) && TypeIsPrimitive(RightNStarType.MainType)
+			&& (LeftNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName or StringTypeName
+			|| IsNumeric(LeftNStarType.MainType.Peek().Name.AsSpan()))
+			&& (RightNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName or StringTypeName
+			|| IsNumeric(RightNStarType.MainType.Peek().Name.AsSpan()))))
 		{
 			GenerateMessage(ref errors, 0x4006, Branch[i].Pos, Branch[i].Name, LeftNStarType, RightNStarType);
 			return Default;
@@ -304,18 +282,11 @@ internal record class TwoValuesExpr(BuiltInMemberCollections C, object Value1, o
 	private String TranslateTimeMinusExpr(ref List<String>? errors, ref int i,
 		NStarType LeftNStarType, NStarType RightNStarType, NStarType PrevNStarType)
 	{
-		if (!(TypeIsPrimitive(LeftNStarType.MainType)
-			&& LeftNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName
-			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
-			or CharTypeName or IntTypeName or UnsignedIntTypeName
-			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
-			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName
-			&& TypeIsPrimitive(RightNStarType.MainType)
-			&& RightNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName
-			or ByteTypeName or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName
-			or CharTypeName or IntTypeName or UnsignedIntTypeName
-			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
-			or RealTypeName or DecimalTypeName or LongRealTypeName or ComplexTypeName or LongComplexTypeName or StringTypeName))
+		if (!(TypeIsPrimitive(LeftNStarType.MainType) && TypeIsPrimitive(RightNStarType.MainType)
+			&& (LeftNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName
+			|| IsNumeric(LeftNStarType.MainType.Peek().Name.AsSpan()))
+			&& (RightNStarType.MainType.Peek().Name.AsSpan() is NullString or BoolTypeName
+			|| IsNumeric(RightNStarType.MainType.Peek().Name.AsSpan()))))
 		{
 			GenerateMessage(ref errors, 0x4006, Branch[i].Pos, Branch[i].Name, LeftNStarType, RightNStarType);
 			return Default;

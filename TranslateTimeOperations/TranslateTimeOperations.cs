@@ -88,7 +88,11 @@ public static class TranslateTimeOperations
 	{
 		var leftType = left.GetBasicNStarType();
 		var rightType = right.GetBasicNStarType();
-		if (NeedsMpzT(leftType, rightType))
+		if (NeedsLongDecimal(leftType, rightType))
+			return (LongDecimal)left.ToNumber() / right.ToNumber();
+		else if (NeedsLongReal(leftType, rightType))
+			return (LongReal)left.ToNumber() / right.ToNumber();
+		else if (NeedsMpzT(leftType, rightType))
 			return (MpzT)left.ToNumber() / right.ToNumber();
 		else
 			return left.ToNumber() / right.ToNumber();
@@ -107,7 +111,11 @@ public static class TranslateTimeOperations
 	{
 		var leftType = left.GetBasicNStarType();
 		var rightType = right.GetBasicNStarType();
-		if (NeedsMpzT(leftType, rightType))
+		if (NeedsLongDecimal(leftType, rightType))
+			return (LongDecimal)left.ToNumber() % right.ToNumber();
+		else if (NeedsLongReal(leftType, rightType))
+			return (LongReal)left.ToNumber() % right.ToNumber();
+		else if (NeedsMpzT(leftType, rightType))
 			return (MpzT)left.ToNumber() % right.ToNumber();
 		else
 			return left.ToNumber() % right.ToNumber();
@@ -127,15 +135,29 @@ public static class TranslateTimeOperations
 			return left.ToString(false).Repeat((int)(uint)right.ToNumber());
 		else if (rightType is StringTypeName)
 			return right.ToString(false).Repeat((int)(uint)left.ToNumber());
+		else if (NeedsLongDecimal(leftType, rightType))
+			return (LongDecimal)left.ToNumber() * right.ToNumber();
+		else if (NeedsLongReal(leftType, rightType))
+			return (LongReal)left.ToNumber() * right.ToNumber();
 		else if (NeedsMpzT(leftType, rightType))
 			return (MpzT)left.ToNumber() * right.ToNumber();
 		else
 			return left.ToNumber() * right.ToNumber();
 	}
 
+	private static bool NeedsLongDecimal(System.ReadOnlySpan<char> leftType, System.ReadOnlySpan<char> rightType) =>
+		leftType is DecimalTypeName && rightType is LongLongTypeName or UnsignedLongLongTypeName or RealTypeName
+		|| leftType is LongLongTypeName or UnsignedLongLongTypeName or RealTypeName && rightType is DecimalTypeName;
+
+	private static bool NeedsLongReal(System.ReadOnlySpan<char> leftType, System.ReadOnlySpan<char> rightType) =>
+		leftType is RealTypeName
+		&& rightType is LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
+		|| leftType is LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
+		&& rightType is RealTypeName;
+
 	private static bool NeedsMpzT(System.ReadOnlySpan<char> leftType, System.ReadOnlySpan<char> rightType) =>
 		leftType is ShortIntTypeName or IntTypeName or LongIntTypeName && rightType is UnsignedLongIntTypeName
-				|| leftType is UnsignedLongIntTypeName && rightType is ShortIntTypeName or IntTypeName or LongIntTypeName;
+		|| leftType is UnsignedLongIntTypeName && rightType is ShortIntTypeName or IntTypeName or LongIntTypeName;
 
 	public static object Not(this object data)
 	{
@@ -168,6 +190,10 @@ public static class TranslateTimeOperations
 			return null!;
 		else if (leftType is StringTypeName || rightType is StringTypeName)
 			return left.ToString(false).Concat(right.ToString(false));
+		else if (NeedsLongDecimal(leftType, rightType))
+			return (LongDecimal)left.ToNumber() + right.ToNumber();
+		else if (NeedsLongReal(leftType, rightType))
+			return (LongReal)left.ToNumber() + right.ToNumber();
 		else if (NeedsMpzT(leftType, rightType))
 			return (MpzT)left.ToNumber() + right.ToNumber();
 		else
@@ -224,7 +250,11 @@ public static class TranslateTimeOperations
 	{
 		var leftType = left.GetBasicNStarType();
 		var rightType = right.GetBasicNStarType();
-		if (NeedsMpzT(leftType, rightType))
+		if (NeedsLongDecimal(leftType, rightType))
+			return (LongDecimal)left.ToNumber() - right.ToNumber();
+		else if (NeedsLongReal(leftType, rightType))
+			return (LongReal)left.ToNumber() - right.ToNumber();
+		else if (NeedsMpzT(leftType, rightType))
 			return (MpzT)left.ToNumber() - right.ToNumber();
 		else
 			return left.ToNumber() - right.ToNumber();

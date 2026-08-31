@@ -4568,7 +4568,11 @@ public sealed partial class SemanticTree
 				subbranchValues[^1].Insert(0, '(').Add(')');
 			if (i < 2)
 				return branch[i][^1].Name;
-			return subbranchValues[^2].Copy().Add(' ').AddRange(branch[i].Name).Add(' ').AddRange(subbranchValues[^1]);
+			String result = [];
+			if (!(LeftNStarType.Equals(DateTimeType) || RightNStarType.Equals(DateTimeType)))
+				result.Add('(').AddRange(Type(ref resultType, branch, ref errors)).Add(')');
+			result.AddRange(subbranchValues[^2]).Add(' ').AddRange(branch[i].Name).Add(' ').AddRange(subbranchValues[^1]);
+			return result;
 		}
 	}
 
@@ -4689,8 +4693,9 @@ public sealed partial class SemanticTree
 		if (branch[i].Name.AsSpan() is "/" or "%" && TypeEqualsToPrimitive(LeftNStarType, RealTypeName)
 			&& !TypeEqualsToPrimitive(RightNStarType, RealTypeName))
 			subbranchValues[^2].Insert(0, "(double)(").Add(')');
-		var result = i < 2 ? branch[i].Name : subbranchValues[^2].Copy().Add(' ')
-			.AddRange(branch[i].Name).Add(' ').AddRange(subbranchValues[^1]);
+		var joiningType = GetResultType(C, LeftNStarType, RightNStarType, subbranchValues[^2], subbranchValues[^1]);
+		String result = ((String)"(").AddRange(Type(ref joiningType, branch, ref errors)).Add(')');
+		result.AddRange(subbranchValues[^2]).Add(' ').AddRange(branch[i].Name).Add(' ').AddRange(subbranchValues[^1]);
 		if (branch[i].Name.AsSpan() is "/" or "%" && !LeftNStarType.Equals(resultType))
 		{
 			if (!TypeIsPrimitive(resultType.MainType) || !resultType.MainType.TryPeek(out _))
@@ -6197,10 +6202,14 @@ public sealed partial class SemanticTree
 				LongCharTypeName => "(char, char)",
 				LongIntTypeName => "long",
 				UnsignedLongIntTypeName => "ulong",
-				RealTypeName => "double",
 				LongLongTypeName => nameof(MpzT),
 				UnsignedLongLongTypeName => nameof(MpuT),
-				ComplexTypeName => "Complex",
+				RealTypeName => "double",
+				UnsignedLongRealTypeName => nameof(UnsignedLongReal),
+				UnsignedLongDecimalTypeName => nameof(UnsignedLongDecimal),
+				LongRealTypeName => nameof(LongReal),
+				LongDecimalTypeName => nameof(LongDecimal),
+				ComplexTypeName => nameof(Complex),
 				StringTypeName => nameof(String),
 				"index" => nameof(Index),
 				"range" => nameof(Range),
@@ -6468,9 +6477,14 @@ public sealed partial class SemanticTree
 				LongCharTypeName => "(char, char)",
 				LongIntTypeName => "long",
 				UnsignedLongIntTypeName => "ulong",
-				RealTypeName => "double",
 				LongLongTypeName => nameof(MpzT),
 				UnsignedLongLongTypeName => nameof(MpuT),
+				RealTypeName => "double",
+				DecimalTypeName => "decimal",
+				UnsignedLongRealTypeName => nameof(UnsignedLongReal),
+				UnsignedLongDecimalTypeName => nameof(UnsignedLongDecimal),
+				LongRealTypeName => nameof(LongReal),
+				LongDecimalTypeName => nameof(LongDecimal),
 				ComplexTypeName => "Complex",
 				StringTypeName => nameof(String),
 				"index" => nameof(Index),
@@ -7473,48 +7487,6 @@ public sealed partial class SemanticTree
 			destExpr.AddRange(adaptedLambdaVarName).Add(')');
 			return true;
 		}
-		//if (TypeEqualsToPrimitive(destinationType, TupleName, false))
-		//{
-		//	if (!TypeEqualsToPrimitive(sourceType, TupleName, false))
-		//	{
-		//		destExpr = DefaultNull;
-		//		return false;
-		//	}
-		//	if (sourceType.ExtraTypes.Length != destinationType.ExtraTypes.Length)
-		//	{
-		//		destExpr = DefaultNull;
-		//		return false;
-		//	}
-		//	var lambdaVarName = RandomVarName();
-		//	var itemName = new String[sourceType.ExtraTypes.Length];
-		//	if (srcExpr is not null)
-		//	{
-		//		itemName[0] = ((String)nameof(CreateVar)).Add('(').AddRange(srcExpr).AddRange(", out var ");
-		//		itemName[0].AddRange(lambdaVarName).AddRange(").Item1");
-		//		for (var i = 1; i < itemName.Length; i++)
-		//			itemName[i] = lambdaVarName.ToNString().AddRange(".Item").AddRange((i + 1).ToString());
-		//	}
-		//	var adaptedItemName = new String[sourceType.ExtraTypes.Length];
-		//	var result = sourceType.ExtraTypes.Combine(destinationType.ExtraTypes.Values)
-		//		.All((x, index) => x.Item1.Name == "type" && x.Item1.Extra is NStarType LeftType
-		//		&& x.Item2.Name == "type" && x.Item2.Extra is NStarType RightType
-		//		&& TypesAreCompatible(branch, ref innerErrors, LeftType, RightType, out var innerWarning,
-		//		itemName[index], out adaptedItemName[index]!, out _)
-		//		&& !innerWarning);
-		//	AddRange(ref errors, innerErrors);
-		//	if (srcExpr is null)
-		//	{
-		//		destExpr = null;
-		//		return result;
-		//	}
-		//	if (RedStarLinq.Equals(itemName, adaptedItemName))
-		//	{
-		//		destExpr = srcExpr;
-		//		return result;
-		//	}
-		//	destExpr = ((String)"(").AddRange(String.Join(", ", adaptedItemName)).Add(')');
-		//	return result;
-		//}
 		return TypeConverters.TypesAreCompatible(C, sourceType, destinationType, out warning, srcExpr, out destExpr,
 			out extraMessage);
 	}
@@ -7560,25 +7532,8 @@ public sealed partial class SemanticTree
 
 	private static void ClearUserDefinedLists()
 	{
-		//C.ExplicitlyConnectedNamespaces.Clear();
 		ImportedNamespaces.Clear();
 		ImportedTypes.Clear();
-		//C.InlineArrays.Clear();
-		//C.TempTypes.Clear();
-		//C.UnnamedTypeStartIndexes.Clear();
-		//C.UserDefinedConstants.Clear();
-		//C.UserDefinedConstructors.Clear();
-		//C.UserDefinedConstructorIndexes.Clear();
-		//C.UserDefinedMethods.Clear();
-		//C.UserDefinedFunctionIndexes.Clear();
-		//C.UserDefinedImplementedInterfaces.Clear();
-		//C.UserDefinedIndexers.Clear();
-		//C.UserDefinedNamespaces.Clear();
-		//C.UserDefinedProperties.Clear();
-		//C.UserDefinedPropertiesMapping.Clear();
-		//C.UserDefinedPropertiesOrder.Clear();
-		//C.UserDefinedTypes.Clear();
-		//C.Variables.Clear();
 	}
 
 	public static String CompileProgram(String program, List<string> packages)

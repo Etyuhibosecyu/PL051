@@ -4,11 +4,11 @@ global using NStar.MathLib.Extras;
 global using System;
 global using System.Diagnostics.CodeAnalysis;
 global using System.Reflection;
+global using static NStar.Core.Extents;
 global using static PL051.NStar.BuiltInMemberCollections;
 global using static PL051.NStar.NStarType;
 global using static PL051.NStar.TypeChecks;
 global using static PL051.NStar.TypeConverters;
-global using static NStar.Core.Extents;
 global using static System.Math;
 global using G = System.Collections.Generic;
 global using String = NStar.Core.String;
@@ -257,8 +257,9 @@ public static class MemberChecks
 		return true;
 	}
 
-	public static bool MethodExists(this BuiltInMemberCollections C, NStarType container, String name, List<NStarType> callParameterTypes,
-		List<NStarType> typeParameters, [MaybeNullWhen(false)] out UserDefinedMethodOverloads functions)
+	public static bool MethodExists(this BuiltInMemberCollections C, NStarType container, String name,
+		List<NStarType> callParameterTypes, List<NStarType> typeParameters,
+		[MaybeNullWhen(false)] out UserDefinedMethodOverloads functions)
 	{
 		if (C.UserDefinedTypes.TryGetValue(SplitType(container.MainType), out _))
 		{

@@ -887,7 +887,7 @@ public class BuiltInMemberCollections
 		{
 			GetPrimitiveBlockStack(ByteTypeName), new()
 			{
-				{ NoBranches, new() { (UnsignedIntType, false), (IntType, false), (ShortIntType, false), (GetPrimitiveType(ShortCharTypeName), true), (BoolType, true) } }
+				{ NoBranches, new() { (UnsignedShortIntType, false), (UnsignedIntType, false), (IntType, false), (ShortIntType, false), (GetPrimitiveType(ShortCharTypeName), true), (BoolType, true) } }
 			}
 		},
 		{
@@ -904,7 +904,7 @@ public class BuiltInMemberCollections
 		{
 			ExtendedTypeInt, new()
 			{
-				{ NoBranches, new() { (RealType, false), (UnsignedLongIntType, false), (LongIntType, false), (IndexType, false), (BoolType, true), (ByteType, true), (UnsignedShortIntType, true), (ShortIntType, true), (UnsignedIntType, true) } }
+				{ NoBranches, new() { (RealType, false), (LongIntType, false), (IndexType, false), (BoolType, true), (ByteType, true), (UnsignedShortIntType, true), (ShortIntType, true), (UnsignedIntType, true), (UnsignedLongIntType, true) } }
 			}
 		},
 		{

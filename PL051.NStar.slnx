@@ -16,6 +16,8 @@
 	<Project Path="../.NStar/Sources/NStar.SortedSets/NStar.SortedSets.csproj" />
 	<Project Path="../.NStar/Sources/NStar.SumCollections/NStar.SumCollections.csproj" />
 	<Project Path="../.NStar/Sources/NStar.TreeSets/NStar.TreeSets.csproj" />
+	<Project Path="../.NStar/Sources/RedStarMath.Complex/RedStarMath.Complex.csproj" />
+	<Project Path="../.NStar/Sources/RedStarMath/RedStarMath.csproj" />
 	<Project Path="AvaloniaEdit/AvaloniaEdit.csproj" />
 	<Project Path="BuiltInMemberCollections/BuiltInMemberCollections.csproj" />
 	<Project Path="BuiltInTypeCollections/BuiltInTypeCollections.csproj" />

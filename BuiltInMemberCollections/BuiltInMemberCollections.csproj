@@ -17,18 +17,7 @@
 		<PackageReference Include="NuGet.Protocol" Version="7.3.1" />
 		<PackageReference Include="PanAndZoom" Version="12.0.0.1" />
 		<PackageReference Include="ReactiveUI.Avalonia" Version="12.0.1" />
+		<ProjectReference Include="..\..\.NStar\Sources\RedStarMath.Complex\RedStarMath.Complex.csproj" />
 		<ProjectReference Include="..\NStarType\NStarType.csproj" />
-	  <Reference Include="RedStarMath">
-	    <HintPath>packages\RedStarMath.dll</HintPath>
-	  </Reference>
-	  <Reference Include="RedStarMath.Complex">
-	    <HintPath>packages\RedStarMath.Complex.dll</HintPath>
-	  </Reference>
-	  <None Update="packages\RedStarMath.dll">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-	  <None Update="packages\RedStarMath.Complex.dll">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
 	</ItemGroup>
 </Project>

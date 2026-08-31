@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.Numerics;
 
 namespace PL051.NStar;
 
@@ -67,6 +68,8 @@ public readonly record struct NStarType(BlockStack MainType, BranchCollection Ex
 	public static readonly BlockStack FuncBlockStack = new(new(BlockType.Namespace, SystemName, 1),
 		new(BlockType.Delegate, nameof(Func<>), 1));
 	public static readonly BlockStack RecursiveBlockStack = GetPrimitiveBlockStack(RecursiveTypeName);
+	public static readonly BlockStack INumberBlockStack = new(new(BlockType.Namespace, SystemName, 1),
+		new(BlockType.Interface, nameof(INumber<>), 1));
 	public static readonly BlockStack IEnumerableBlockStack = new(new(BlockType.Namespace, SystemName, 1),
 		new(BlockType.Namespace, CollectionsName, 1), new(BlockType.Interface, nameof(G.IEnumerable<>), 1));
 	public static readonly BlockStack BaseIndexableBlockStack = new(new(BlockType.Namespace, SystemName, 1),

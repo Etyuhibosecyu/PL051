@@ -33,6 +33,7 @@ public partial class MainParsing : LexemStream
 	private const string IsAndExpr = nameof(IsAndExpr);
 	private const string IsOrExpr = nameof(IsOrExpr);
 	private const string IsXorExpr = nameof(IsXorExpr);
+	private const string Lambda = nameof(Lambda);
 	private const string LambdaExpr = nameof(LambdaExpr);
 	private const string LambdaExpr4 = nameof(LambdaExpr4);
 	private const string Members = nameof(Members);
@@ -1706,6 +1707,11 @@ public partial class MainParsing : LexemStream
 			_PosStack[_Stackpos] = pos;
 			if (_TaskStack[_Stackpos - 1] == nameof(Main2))
 				return ChangeTaskAndAppendBranch(nameof(Main));
+			//{
+			//	_ErLStack[_Stackpos].AddRange(errors ?? []);
+			//	_TBStack[_Stackpos] = new(nameof(Main), [treeBranch]);
+			//	return Default();
+			//}
 			_TBStack[_Stackpos]?.Add(treeBranch);
 			if (pos < end && IsCurrentLexemKeyword("else"))
 			{
@@ -2349,13 +2355,13 @@ public partial class MainParsing : LexemStream
 		if (task == LambdaExpr4)
 			pos++;
 		var localTreeBranch = _TBStack[_Stackpos];
-		localTreeBranch?.Name = "Lambda";
+		localTreeBranch?.Name = Lambda;
 		if (localTreeBranch is not null && localTreeBranch.Length == 1
 			&& localTreeBranch[0].Name.AsSpan() is Assignment or DeclarationAssignment)
 		{
 			var assignmentBranch = localTreeBranch[0];
 			localTreeBranch.RemoveAt(0);
-			assignmentBranch[0] = new("Lambda", [assignmentBranch[0], treeBranch!]);
+			assignmentBranch[0] = new(Lambda, [assignmentBranch[0], treeBranch!]);
 			_TBStack[_Stackpos] = assignmentBranch;
 			return Default();
 		}
@@ -4061,8 +4067,8 @@ public partial class MainParsing : LexemStream
 				GenerateUnexpectedEndOfTypeError(ref errors);
 				return _SuccessStack[_Stackpos] = false;
 			}
-			else if (lexems[pos].Type == LexemType.Identifier && (lexems[pos].String == CharTypeName || lexems[pos].String == IntTypeName
-				|| s == "long" && (lexems[pos].String == "long" || lexems[pos].String == "long"/*RealTypeName*/)))
+			else if (lexems[pos].Type == LexemType.Identifier && (lexems[pos].String.AsSpan() is CharTypeName or IntTypeName
+				|| s == "long" && lexems[pos].String.AsSpan() is "long" or RealTypeName or DecimalTypeName))
 			{
 				NStarType = (new([new(BlockType.Primitive, s + " " + lexems[pos].String, 1)]), NoBranches);
 				_PosStack[_Stackpos] = ++pos;
@@ -4109,7 +4115,7 @@ public partial class MainParsing : LexemStream
 				return _SuccessStack[_Stackpos] = false;
 			}
 			else if (lexems[pos].Type == LexemType.Identifier
-				&& (lexems[pos].String == IntTypeName || lexems[pos].String == "long"))
+				&& lexems[pos].String.AsSpan() is IntTypeName or "long" or RealTypeName or DecimalTypeName)
 			{
 				NStarType = (new([new(BlockType.Primitive, s + " " + mediumWord + lexems[pos].String, 1)]), NoBranches);
 				_PosStack[_Stackpos] = ++pos;
@@ -5311,8 +5317,8 @@ public partial class MainParsing : LexemStream
 			}
 			else if (modifier == 2 && UnsignedLongDecimal.TryParse(s2, null, out var ulm))
 				result = ulm;
-			else if (modifier == 1 && LongDecimal.TryParse(s2, null, out var lr))
-				result = lr;
+			else if (modifier == 1 && LongDecimal.TryParse(s2, null, out var lm))
+				result = lm;
 			else
 				return false;
 		}

@@ -11,12 +11,6 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\PL051.NStar\PL051.NStar.csproj" />
-		<Reference Include="RedStarMath">
-			<HintPath>..\BuiltInMemberCollections\packages\RedStarMath.dll</HintPath>
-		</Reference>
-		<Reference Include="RedStarMath.Complex">
-			<HintPath>..\BuiltInMemberCollections\packages\RedStarMath.Complex.dll</HintPath>
-		</Reference>
 	</ItemGroup>
 
 	<Target Name="MyPostPublish" AfterTargets="Publish">

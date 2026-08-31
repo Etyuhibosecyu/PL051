@@ -8,11 +8,5 @@
 	<ItemGroup>
 		<ProjectReference Include="..\CodeSample\CodeSample.csproj" />
 		<ProjectReference Include="..\MemberConverters\MemberConverters.csproj" />
-		<Reference Include="RedStarMath">
-			<HintPath>..\BuiltInMemberCollections\packages\RedStarMath.dll</HintPath>
-		</Reference>
-		<Reference Include="RedStarMath.Complex">
-			<HintPath>..\BuiltInMemberCollections\packages\RedStarMath.Complex.dll</HintPath>
-		</Reference>
 	</ItemGroup>
 </Project>

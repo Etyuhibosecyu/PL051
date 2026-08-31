@@ -161,126 +161,169 @@ public static class TypeConverters
 			return (ListBlockStack, new BranchCollection { new((n - 1).ToString(), 0, []), type.ExtraTypes[1] });
 	}
 
-	private static String GetPrimitiveResultType(String leftTypeName, String rightTypeName, String leftValue, String rightValue)
+	private static String GetPrimitiveResultType(String leftType, String rightType, String leftValue, String rightValue)
 	{
-		if (leftTypeName == BoolTypeName && rightTypeName.AsSpan() is ByteTypeName
-			or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName or CharTypeName or IntTypeName or UnsignedIntTypeName
-			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
-			or RealTypeName or DecimalTypeName or "unsigned long real" or LongRealTypeName or LongDecimalTypeName
-			or ComplexTypeName or DeccomplexTypeName or LongComplexTypeName or LongDeccomplexTypeName)
+		if (leftType == BoolTypeName && IsNumeric(rightType.AsSpan()))
 			leftValue.Insert(0, '(').AddRange(" ? 1 : 0)");
-		else if (rightTypeName == BoolTypeName && leftTypeName.AsSpan() is ByteTypeName
-			or ShortCharTypeName or ShortIntTypeName or UnsignedShortIntTypeName or CharTypeName or IntTypeName or UnsignedIntTypeName
-			or LongCharTypeName or LongIntTypeName or UnsignedLongIntTypeName or LongLongTypeName or UnsignedLongLongTypeName
-			or RealTypeName or DecimalTypeName or "unsigned long real" or LongRealTypeName or LongDecimalTypeName
-			or ComplexTypeName or DeccomplexTypeName or LongComplexTypeName or LongDeccomplexTypeName)
+		else if (rightType == BoolTypeName && IsNumeric(leftType.AsSpan()))
 			rightValue.Insert(0, '(').AddRange(" ? 1 : 0)");
-		if (leftTypeName == "dynamic" || rightTypeName == "dynamic")
-			return "dynamic";
-		else if (leftTypeName == StringTypeName || rightTypeName == StringTypeName)
-			return StringTypeName;
-		else if (leftTypeName == LongDeccomplexTypeName || rightTypeName == LongDeccomplexTypeName)
-			return LongComplexTypeName;
-		else if (leftTypeName == LongComplexTypeName || rightTypeName == LongComplexTypeName)
+		string t;
+		if (leftType == (t = "dynamic") || rightType == t)
+			return t;
+		else if (leftType == (t = StringTypeName) || rightType == t)
+			return t;
+		else if (leftType == (t = LongDeccomplexTypeName) || rightType == t)
+			return t;
+		else if (leftType == (t = LongComplexTypeName) || rightType == t)
 		{
-			if (leftTypeName == LongDecimalTypeName || rightTypeName == LongDecimalTypeName)
+			if (leftType.AsSpan() is DecimalTypeName or UnsignedLongDecimalTypeName or LongDecimalTypeName
+				|| rightType.AsSpan() is DecimalTypeName or UnsignedLongDecimalTypeName or LongDecimalTypeName)
 				return LongDeccomplexTypeName;
 			else
-				return LongComplexTypeName;
+				return t;
 		}
-		else if (leftTypeName == LongDecimalTypeName || rightTypeName == LongDecimalTypeName)
-			return LongDecimalTypeName;
-		else if (leftTypeName == LongRealTypeName || rightTypeName == LongRealTypeName)
-			return LongRealTypeName;
-		else if (leftTypeName == "unsigned long real" || rightTypeName == "unsigned long real")
-			return "unsigned long real";
-		else if (leftTypeName == LongLongTypeName || rightTypeName == LongLongTypeName)
+		else if (leftType == (t = DeccomplexTypeName) || rightType == t)
 		{
-			if (leftTypeName == ComplexTypeName || rightTypeName == ComplexTypeName)
+			if (leftType.AsSpan() is LongLongTypeName or UnsignedLongLongTypeName
+				or RealTypeName or UnsignedLongRealTypeName or UnsignedLongDecimalTypeName
+				or LongRealTypeName or LongDecimalTypeName or ComplexTypeName
+				|| rightType.AsSpan() is LongLongTypeName or UnsignedLongLongTypeName
+				or RealTypeName or UnsignedLongRealTypeName or UnsignedLongDecimalTypeName
+				or LongRealTypeName or LongDecimalTypeName or ComplexTypeName)
+				return LongDeccomplexTypeName;
+			else
+				return t;
+		}
+		else if (leftType == (t = ComplexTypeName) || rightType == t)
+		{
+			if (leftType.AsSpan() is DecimalTypeName or UnsignedLongDecimalTypeName or LongDecimalTypeName
+				|| rightType.AsSpan() is DecimalTypeName or UnsignedLongDecimalTypeName or LongDecimalTypeName)
+				return LongDeccomplexTypeName;
+			else if (leftType.AsSpan() is LongLongTypeName or UnsignedLongLongTypeName
+				or UnsignedLongRealTypeName or LongRealTypeName
+				|| rightType.AsSpan() is LongLongTypeName or UnsignedLongLongTypeName
+				or UnsignedLongRealTypeName or LongRealTypeName)
 				return LongComplexTypeName;
-			else if (leftTypeName.AsSpan() is RealTypeName or DecimalTypeName || rightTypeName.AsSpan() is RealTypeName or DecimalTypeName)
+			else
+				return t;
+		}
+		else if (leftType == (t = LongDecimalTypeName) || rightType == t)
+			return t;
+		else if (leftType == (t = LongRealTypeName) || rightType == t)
+		{
+			if (leftType.AsSpan() is DecimalTypeName or UnsignedLongDecimalTypeName
+				|| rightType.AsSpan() is DecimalTypeName or UnsignedLongDecimalTypeName)
+				return LongDecimalTypeName;
+			else
+				return t;
+		}
+		else if (leftType == (t = UnsignedLongDecimalTypeName) || rightType == t)
+		{
+			if (leftType.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName or LongLongTypeName
+				or RealTypeName or DecimalTypeName or UnsignedLongRealTypeName
+				|| rightType.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName or LongLongTypeName
+				or RealTypeName or DecimalTypeName or UnsignedLongRealTypeName)
+				return LongDecimalTypeName;
+			else
+				return t;
+		}
+		else if (leftType == (t = UnsignedLongRealTypeName) || rightType == t)
+		{
+			if (leftType == DecimalTypeName || rightType == DecimalTypeName)
+				return LongDecimalTypeName;
+			else if (leftType.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName or LongLongTypeName
+				or RealTypeName
+				|| rightType.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName or LongLongTypeName
+				or RealTypeName)
 				return LongRealTypeName;
 			else
-				return LongLongTypeName;
+				return t;
 		}
-		else if (leftTypeName == UnsignedLongLongTypeName || rightTypeName == UnsignedLongLongTypeName)
+		else if (leftType == (t = DecimalTypeName) || rightType == t)
 		{
-			if (leftTypeName == ComplexTypeName || rightTypeName == ComplexTypeName)
-				return LongComplexTypeName;
-			else if (leftTypeName.AsSpan() is RealTypeName or DecimalTypeName || rightTypeName.AsSpan() is RealTypeName or DecimalTypeName)
-				return LongRealTypeName;
-			else if (leftTypeName.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName or nameof(DateTime) or "TimeSpan"
-				|| rightTypeName.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName or nameof(DateTime) or "TimeSpan")
-				return LongLongTypeName;
+			if (leftType.AsSpan() is LongLongTypeName or UnsignedLongLongTypeName or RealTypeName
+				|| rightType.AsSpan() is LongLongTypeName or UnsignedLongLongTypeName or RealTypeName)
+				return LongDecimalTypeName;
 			else
-				return UnsignedLongLongTypeName;
+				return t;
 		}
-		else if (leftTypeName == ComplexTypeName || rightTypeName == ComplexTypeName)
-			return ComplexTypeName;
-		else if (leftTypeName == RealTypeName || rightTypeName == RealTypeName)
+		else if (leftType == (t = RealTypeName) || rightType == t)
 		{
-			if (leftTypeName == DecimalTypeName || rightTypeName == DecimalTypeName)
+			if (leftType.AsSpan() is LongIntTypeName or UnsignedLongIntTypeName
+				or LongLongTypeName or UnsignedLongLongTypeName
+				|| rightType.AsSpan() is LongIntTypeName or UnsignedLongIntTypeName
+				or LongLongTypeName or UnsignedLongLongTypeName)
 				return LongRealTypeName;
 			else
-				return RealTypeName;
+				return t;
 		}
-		else if (leftTypeName == DecimalTypeName || rightTypeName == DecimalTypeName)
-			return DecimalTypeName;
-		else if (leftTypeName == UnsignedLongIntTypeName || rightTypeName == UnsignedLongIntTypeName)
+		else if (leftType == (t = LongLongTypeName) || rightType == t)
+			return t;
+		else if (leftType == (t = UnsignedLongLongTypeName) || rightType == t)
 		{
-			if (leftTypeName.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName or nameof(DateTime) or "TimeSpan"
-				|| rightTypeName.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName or nameof(DateTime) or "TimeSpan")
+			if (leftType.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName
+				|| rightType.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName)
 				return LongLongTypeName;
 			else
-				return UnsignedLongIntTypeName;
+				return t;
 		}
-		else if (leftTypeName == "TimeSpan" || rightTypeName == "TimeSpan"
-			|| leftTypeName == nameof(DateTime) && rightTypeName == nameof(DateTime))
-			return "TimeSpan";
-		else if (leftTypeName == nameof(DateTime) || rightTypeName == nameof(DateTime))
-			return nameof(DateTime);
-		else if (leftTypeName == LongIntTypeName || rightTypeName == LongIntTypeName)
-			return LongIntTypeName;
-		else if (leftTypeName == LongCharTypeName || rightTypeName == LongCharTypeName)
+		else if (leftType == (t = UnsignedLongIntTypeName) || rightType == t)
 		{
-			if (leftTypeName == ShortIntTypeName || rightTypeName == ShortIntTypeName || leftTypeName == IntTypeName || rightTypeName == IntTypeName)
+			if (leftType.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName or nameof(DateTime) or "TimeSpan"
+				|| rightType.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName or nameof(DateTime) or "TimeSpan")
+				return LongLongTypeName;
+			else
+				return t;
+		}
+		else if (leftType == (t = "TimeSpan") || rightType == t
+			|| leftType == (t = nameof(DateTime)) || rightType == t)
+			return t;
+		else if (leftType == (t = nameof(DateTime)) || rightType == t)
+			return t;
+		else if (leftType == (t = LongIntTypeName) || rightType == t)
+			return t;
+		else if (leftType == (t = LongCharTypeName) || rightType == t)
+		{
+			if (leftType.AsSpan() is ShortIntTypeName or IntTypeName
+				|| rightType.AsSpan() is ShortIntTypeName or IntTypeName)
 				return LongIntTypeName;
 			else
-				return LongCharTypeName;
+				return t;
 		}
-		else if (leftTypeName == UnsignedIntTypeName || rightTypeName == UnsignedIntTypeName)
+		else if (leftType == (t = UnsignedIntTypeName) || rightType == t)
 		{
-			if (leftTypeName == ShortIntTypeName || rightTypeName == ShortIntTypeName || leftTypeName == IntTypeName || rightTypeName == IntTypeName)
+			if (leftType.AsSpan() is ShortIntTypeName or IntTypeName
+				|| rightType.AsSpan() is ShortIntTypeName or IntTypeName)
 				return LongIntTypeName;
 			else
-				return UnsignedIntTypeName;
+				return t;
 		}
-		else if (leftTypeName == IntTypeName || rightTypeName == IntTypeName)
-			return IntTypeName;
-		else if (leftTypeName == CharTypeName || rightTypeName == CharTypeName)
+		else if (leftType == (t = IntTypeName) || rightType == t)
+			return t;
+		else if (leftType == (t = CharTypeName) || rightType == t)
 		{
-			if (leftTypeName == ShortIntTypeName || rightTypeName == ShortIntTypeName)
+			if (leftType == ShortIntTypeName || rightType == ShortIntTypeName)
 				return IntTypeName;
 			else
-				return CharTypeName;
+				return t;
 		}
-		else if (leftTypeName == UnsignedShortIntTypeName || rightTypeName == UnsignedShortIntTypeName)
+		else if (leftType == (t = UnsignedShortIntTypeName) || rightType == t)
 		{
-			if (leftTypeName == ShortIntTypeName || rightTypeName == ShortIntTypeName)
+			if (leftType == ShortIntTypeName || rightType == ShortIntTypeName)
 				return IntTypeName;
 			else
-				return UnsignedShortIntTypeName;
+				return t;
 		}
-		else if (leftTypeName == ShortIntTypeName || rightTypeName == ShortIntTypeName)
-			return ShortIntTypeName;
-		else if (leftTypeName == ShortCharTypeName || rightTypeName == ShortCharTypeName)
-			return ShortCharTypeName;
-		else if (leftTypeName == ByteTypeName || rightTypeName == ByteTypeName)
-			return ByteTypeName;
-		else if (leftTypeName == BoolTypeName || rightTypeName == BoolTypeName)
-			return BoolTypeName;
-		else if (leftTypeName == "BaseClass" || rightTypeName == "BaseClass")
-			return "BaseClass";
+		else if (leftType == (t = ShortIntTypeName) || rightType == t)
+			return t;
+		else if (leftType == (t = ShortCharTypeName) || rightType == t)
+			return t;
+		else if (leftType == (t = ByteTypeName) || rightType == t)
+			return t;
+		else if (leftType == (t = BoolTypeName) || rightType == t)
+			return t;
+		else if (leftType == (t = "BaseClass") || rightType == t)
+			return t;
 		else
 			return NullString;
 	}

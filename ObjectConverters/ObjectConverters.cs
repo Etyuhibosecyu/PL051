@@ -166,7 +166,7 @@ public static class ObjectConverters
 				_ => r.ToString() + (addCasting ? "d" : "")
 			};
 			case DecimalTypeName when data is decimal m:
-			return m.ToString();
+			return m.ToString() + (addCasting ? "m" : "");
 			case UnsignedLongRealTypeName when data is UnsignedLongReal ulr:
 			if (!addCasting)
 				return ulr.ToString();
@@ -187,7 +187,7 @@ public static class ObjectConverters
 			else if (LongReal.IsNaN(lr))
 				return addCasting ? nameof(LongReal) + "." + nameof(LongReal.NaN) : nameof(LongReal) + ".Uncty";
 			else
-				return (addCasting ? "(" + nameof(LongReal) + ")" : "") + lr.ToString();
+				return (addCasting ? "(" + nameof(LongReal) + ")" : "") + "(" + lr.ToString("E28") + ")";
 			case LongDecimalTypeName when data is LongDecimal lm:
 			if (LongDecimal.IsPositiveInfinity(lm))
 				return addCasting ? nameof(LongDecimal) + "." + nameof(LongDecimal.PositiveInfinity) : nameof(LongDecimal) + ".Infty";
@@ -196,7 +196,7 @@ public static class ObjectConverters
 			else if (LongDecimal.IsNaN(lm))
 				return addCasting ? nameof(LongDecimal) + "." + nameof(LongDecimal.NaN) : nameof(LongDecimal) + ".Uncty";
 			else
-				return (addCasting ? "(" + nameof(LongDecimal) + ")" : "") + lm.ToString();
+				return (addCasting ? "(" + nameof(LongDecimal) + ")" : "") + "(" + lm.ToString("E28") + ")";
 			case ComplexTypeName when data is Complex c:
 			return (addCasting ? "new Complex(" : "") + c.Real switch
 			{

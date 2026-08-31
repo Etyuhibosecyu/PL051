@@ -8,11 +8,5 @@
 	<ItemGroup>
 		<PackageReference Include="System.CodeDom" Version="10.0.7" />
 		<ProjectReference Include="..\MainParsing\MainParsing.csproj" />
-		<Reference Include="RedStarMath">
-			<HintPath>..\BuiltInMemberCollections\packages\RedStarMath.dll</HintPath>
-		</Reference>
-		<Reference Include="RedStarMath.Complex">
-			<HintPath>..\BuiltInMemberCollections\packages\RedStarMath.Complex.dll</HintPath>
-		</Reference>
 	</ItemGroup>
 </Project>

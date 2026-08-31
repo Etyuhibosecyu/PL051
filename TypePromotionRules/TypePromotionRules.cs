@@ -202,27 +202,91 @@ public static class TypePromotionRules
 	private static String? ValidateRealType(String leftType, String rightType)
 	{
 		string t;
-		if (leftType == (t = LongComplexTypeName) || rightType == t || leftType == (t = LongRealTypeName) || rightType == t)
+		if (leftType == (t = LongDeccomplexTypeName) || rightType == t)
 			return t;
-		else if (leftType == (t = LongLongTypeName) || rightType == t)
+		else if (leftType == (t = LongComplexTypeName) || rightType == t)
 		{
-			if (leftType == (t = RealTypeName) || rightType == t)
+			if (leftType.AsSpan() is DecimalTypeName or UnsignedLongDecimalTypeName or LongDecimalTypeName
+				|| rightType.AsSpan() is DecimalTypeName or UnsignedLongDecimalTypeName or LongDecimalTypeName)
+				return LongDeccomplexTypeName;
+			else
+				return t;
+		}
+		else if (leftType == (t = DeccomplexTypeName) || rightType == t)
+		{
+			if (leftType.AsSpan() is LongLongTypeName or UnsignedLongLongTypeName
+				or RealTypeName or UnsignedLongRealTypeName or UnsignedLongDecimalTypeName
+				or LongRealTypeName or LongDecimalTypeName or ComplexTypeName
+				|| rightType.AsSpan() is LongLongTypeName or UnsignedLongLongTypeName
+				or RealTypeName or UnsignedLongRealTypeName or UnsignedLongDecimalTypeName
+				or LongRealTypeName or LongDecimalTypeName or ComplexTypeName)
+				return LongDeccomplexTypeName;
+			else
+				return t;
+		}
+		else if (leftType == (t = ComplexTypeName) || rightType == t)
+		{
+			if (leftType.AsSpan() is DecimalTypeName or UnsignedLongDecimalTypeName or LongDecimalTypeName
+				|| rightType.AsSpan() is DecimalTypeName or UnsignedLongDecimalTypeName or LongDecimalTypeName)
+				return LongDeccomplexTypeName;
+			else if (leftType.AsSpan() is LongLongTypeName or UnsignedLongLongTypeName
+				or UnsignedLongRealTypeName or LongRealTypeName
+				|| rightType.AsSpan() is LongLongTypeName or UnsignedLongLongTypeName
+				or UnsignedLongRealTypeName or LongRealTypeName)
+				return LongComplexTypeName;
+			else
+				return t;
+		}
+		else if (leftType == (t = LongDecimalTypeName) || rightType == t)
+			return t;
+		else if (leftType == (t = LongRealTypeName) || rightType == t)
+		{
+			if (leftType.AsSpan() is DecimalTypeName or UnsignedLongDecimalTypeName
+				|| rightType.AsSpan() is DecimalTypeName or UnsignedLongDecimalTypeName)
+				return LongDecimalTypeName;
+			else
+				return t;
+		}
+		else if (leftType == (t = UnsignedLongDecimalTypeName) || rightType == t)
+		{
+			if (leftType.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName or LongLongTypeName
+				or RealTypeName or DecimalTypeName or UnsignedLongRealTypeName
+				|| rightType.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName or LongLongTypeName
+				or RealTypeName or DecimalTypeName or UnsignedLongRealTypeName)
+				return LongDecimalTypeName;
+			else
+				return t;
+		}
+		else if (leftType == (t = UnsignedLongRealTypeName) || rightType == t)
+		{
+			if (leftType == DecimalTypeName || rightType == DecimalTypeName)
+				return LongDecimalTypeName;
+			else if (leftType.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName or LongLongTypeName
+				or RealTypeName
+				|| rightType.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName or LongLongTypeName
+				or RealTypeName)
 				return LongRealTypeName;
 			else
-				return null;
+				return t;
 		}
-		else if (leftType == (t = UnsignedLongLongTypeName) || rightType == t)
+		else if (leftType == (t = DecimalTypeName) || rightType == t)
 		{
-			if (leftType.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName or RealTypeName
-				|| rightType.AsSpan() is ShortIntTypeName or IntTypeName or LongIntTypeName or RealTypeName)
+			if (leftType.AsSpan() is LongLongTypeName or UnsignedLongLongTypeName or RealTypeName
+				|| rightType.AsSpan() is LongLongTypeName or UnsignedLongLongTypeName or RealTypeName)
+				return LongDecimalTypeName;
+			else
+				return t;
+		}
+		else if (leftType == (t = RealTypeName) || rightType == t)
+		{
+			if (leftType.AsSpan() is LongIntTypeName or UnsignedLongIntTypeName
+				or LongLongTypeName or UnsignedLongLongTypeName
+				|| rightType.AsSpan() is LongIntTypeName or UnsignedLongIntTypeName
+				or LongLongTypeName or UnsignedLongLongTypeName)
 				return LongRealTypeName;
 			else
-				return null;
+				return t;
 		}
-		else if (leftType == (t = ComplexTypeName) || rightType == t || leftType == (t = RealTypeName) || rightType == t)
-			return t;
-		else if (rightType == BoolTypeName)
-			return ByteTypeName;
 		return null;
 	}
 
